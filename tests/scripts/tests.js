@@ -44,7 +44,6 @@ describe("Connect & Disconnect socket", () => {
 })
 
 /* Make sure that send and recive events are working */
-
 describe("Send & Receive events", () => {
     let socket
     before(() => {
