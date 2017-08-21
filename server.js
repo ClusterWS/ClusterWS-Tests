@@ -1,4 +1,4 @@
-const ClusterWS = require('./index').ClusterWS
+const ClusterWS = require('./ClusterWS-server/index').ClusterWS
 const express = require('express')
 const path = require('path')
 

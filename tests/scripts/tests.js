@@ -145,5 +145,19 @@ describe("Publish & Subscribe", () => {
             })
         })
     })
+    it('Should unsubscribe from the channel', (done) => {
+        socket.on('connect', () => {
+            let myChannel = socket.subscribe('channel3').watch((msg) => {
+                chai.expect(msg).to.eql('fail')
+            })
+            myChannel.unsubscribe()
+            myChannel.publish('hello')
+            setTimeout(()=>{
+                done(null)
+                
+            }, 20)
+        })
+
+    })
 })
 
