@@ -1,0 +1,15 @@
+{
+  "name": "cws",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.15.4",
+    "uws": "^8.14.1"
+  }
+}
