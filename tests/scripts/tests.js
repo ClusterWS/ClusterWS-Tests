@@ -1,118 +1,125 @@
-let socket;
+// let socket;
+// let count = 0
+// beforeEach((done) => {
+//     socket[count] = new ClusterWS({
+//         url: 'localhost',
+//         port: 80
+//     })
+//     done(null)
+// })
 
-beforeEach((done) => {
-    socket = new ClusterWS({
-        url: 'localhost',
-        port: 80
-    })
-    done(null)
-})
+// before(()=>{
+//     socket = new ClusterWS({
+//         url: 'localhost',
+//         port: 80
+//     })
+// })
 
 describe("Connect & Disconnect socket", () => {
+    let socket
+    before(() => {
+        socket = new ClusterWS({
+            url: 'localhost',
+            port: 80
+        })
+    })
     it('Should fire connect event', (done) => {
         socket.on('connect', () => {
             done(null)
-            socket.disconnect()
         })
     })
 
     it('Should disconnect socket', (done) => {
-        socket.on('connect', () => {
-            socket.on('disconnect', () => {
-                done(null)
-            })
-            socket.disconnect()
+        console.log(socket)
+        socket.on('disconnect', () => {
+            done(null)
         })
+        socket.disconnect()
     })
 })
 
 describe("Send & Receive events", () => {
+    let socket
+    before(() => {
+        socket = new ClusterWS({
+            url: 'localhost',
+            port: 80
+        })
+    })
     it('Should emit an event and get response', (done) => {
         socket.on('connect', () => {
             socket.on('Hello', (msg) => {
                 chai.expect(msg).to.equal('world');
                 done(null)
-                socket.disconnect()
             })
             socket.send('Hello', 'world')
         })
     })
 
     it('Should send and get String', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.equal('string');
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', 'string')
+        socket.on('String', (msg) => {
+            chai.expect(msg).to.equal('string');
+            done(null)
         })
+        socket.send('String', 'string')
     })
 
     it('Should send and get Boolean', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.equal(true);
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', true)
+        socket.on('Boolean', (msg) => {
+            chai.expect(msg).to.equal(true);
+            done(null)
         })
+        socket.send('Boolean', true)
     })
 
     it('Should send and get Number', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.equal(4);
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', 4)
+        socket.on('Number', (msg) => {
+            chai.expect(msg).to.equal(4);
+            done(null)
         })
+        socket.send('Number', 4)
     })
 
     it('Should send and get Array', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.eql([1, true, 'i am', null]);
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', [1, true, 'i am', null])
+        socket.on('Array', (msg) => {
+            chai.expect(msg).to.eql([1, true, 'i am', null]);
+            done(null)
         })
+        socket.send('Array', [1, true, 'i am', null])
     })
 
     it('Should send and get Object', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.eql({ m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] });
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', { m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] })
+        socket.on('Object', (msg) => {
+            chai.expect(msg).to.eql({ m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] });
+            done(null)
         })
+        socket.send('Object', { m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] })
     })
 
     it('Should send and get Null', (done) => {
-        socket.on('connect', () => {
-            socket.on('Types', (msg) => {
-                chai.expect(msg).to.eql(null);
-                done(null)
-                socket.disconnect()
-            })
-            socket.send('Types', null)
+        socket.on('Null', (msg) => {
+            chai.expect(msg).to.eql(null);
+            done(null)
+            socket.disconnect()
         })
+        socket.send('Null', null)
     })
 })
 
 
 describe("Publish & Subscribe", () => {
+    let socket
+    before(() => {
+        socket = new ClusterWS({
+            url: 'localhost',
+            port: 80
+        })
+    })
     it('Should subscribe to channel and get message on publish', (done) => {
         socket.on('connect', () => {
-            let myChannel = socket.subscribe('channel').watch((msg) => {
+            socket.subscribe('channel').watch((msg) => {
                 chai.expect(msg).to.eql('done well')
                 done(null)
-                socket.disconnect()
             }).publish('done well')
         })
     })
@@ -123,12 +130,9 @@ describe("Publish & Subscribe", () => {
             port: 80
         })
 
-        socket.on('connect', () => {
-            let myChannel = socket.subscribe('channel2').watch((msg) => {
-                chai.expect(msg).to.eql('got it')
-                done(null)
-                socket.disconnect()
-            })
+        socket.subscribe('channel2').watch((msg) => {
+            chai.expect(msg).to.eql('got it')
+            done(null)
         })
 
         socket2.on('connect', () => {
@@ -137,27 +141,25 @@ describe("Publish & Subscribe", () => {
         })
     })
     it('Get message which is published by server', (done) => {
-        socket.on('connect', () => {
-            let myChannel = socket.subscribe('from server').watch((msg) => {
+        let i = 0
+        socket.subscribe('from server').watch((msg) => {
+            if (i < 1) {
                 chai.expect(msg).to.eql('i am server')
                 done(null)
-                socket.disconnect()
-            })
+            }
+            i++
         })
     })
     it('Should unsubscribe from the channel', (done) => {
-        socket.on('connect', () => {
-            let myChannel = socket.subscribe('channel3').watch((msg) => {
-                chai.expect(msg).to.eql('fail')
-            })
-            myChannel.unsubscribe()
-            myChannel.publish('hello')
-            setTimeout(()=>{
-                done(null)
-                
-            }, 20)
+        let myChannel3 = socket.subscribe('channel3').watch((msg) => {
+            chai.expect(msg).to.eql('fail')
         })
-
+        myChannel3.unsubscribe()
+        myChannel3.publish('hello')
+        setTimeout(() => {
+            done(null)
+            socket.disconnect()
+        }, 20)
     })
 })
 

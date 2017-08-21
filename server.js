@@ -24,8 +24,23 @@ function Worker() {
             socket.send('Hello', data)
         })
 
-        socket.on('Types', (data)=>{
-            socket.send('Types', data)
+        socket.on('String', (data)=>{
+            socket.send('String', data)
+        })
+        socket.on('Boolean', (data)=>{
+            socket.send('Boolean', data)
+        })
+        socket.on('Number', (data)=>{
+            socket.send('Number', data)
+        })
+        socket.on('Array', (data)=>{
+            socket.send('Array', data)
+        })
+        socket.on('Object', (data)=>{
+            socket.send('Object', data)
+        })
+        socket.on('Null', (data)=>{
+            socket.send('Null', data)
         })
     })
 }

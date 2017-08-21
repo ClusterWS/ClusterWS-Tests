@@ -204,7 +204,7 @@ var Socket = (function () {
         return this.channels[channel] ? this.channels[channel] : this.channels[channel] = new channel_1.Channel(channel, this);
     };
     Socket.prototype.disconnect = function (code, msg) {
-        this.webSocket.close(code, msg);
+        this.webSocket.close(code || 1000, msg);
     };
     Socket.prototype.on = function (event, fn) {
         this.events.on(event, fn);
