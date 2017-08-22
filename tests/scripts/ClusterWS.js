@@ -176,28 +176,50 @@ var Socket = (function () {
         this.options = options;
         this.events = new eventemitter_1.EventEmitter();
         this.channels = {};
+        this.autoReconnect = false;
+        this.inReconnectionState = false;
+        this.reconnectionAttempted = 0;
+        this.autoReconnect = this.options.autoReconnect;
         this.connect();
     }
-    Socket.prototype.connect = function () {
+    Socket.prototype.connect = function (interval) {
         var _this = this;
-        this.webSocket = null;
+        var pings = 0;
+        var pingInterval;
         this.webSocket = new WebSocket('ws://' + this.options.url + ':' + this.options.port);
-        this.webSocket.onopen = function () { return _this.events.emit('connect'); };
         this.webSocket.onerror = function (err) { return _this.events.emit('error', err); };
+        this.webSocket.onopen = function () {
+            clearInterval(interval);
+            _this.inReconnectionState = false;
+            _this.reconnectionAttempted = 0;
+            fp_1._.map(function (channel) { return channel.subscribe(); }, _this.channels);
+            _this.events.emit('connect');
+        };
         this.webSocket.onmessage = function (msg) {
-            if (msg.data === '#0')
+            if (msg.data === '#0') {
+                pings = 0;
                 return _this.send('#1', null, 'ping');
+            }
             msg = JSON.parse(msg.data);
             fp_1._.switchcase({
                 'p': function () { return _this.channels[msg.m[1]] ? _this.channels[msg.m[1]].message(msg.m[2]) : ''; },
                 'e': function () { return _this.events.emit(msg.m[1], msg.m[2]); },
                 's': function () { return fp_1._.switchcase({
-                    'c': function () { }
+                    'c': function () { return pingInterval = setInterval(function () { return pings < 3 ? pings++ : _this.webSocket.disconnect(3001, 'No pings from server'); }, msg.m[2].ping); }
                 })(msg.m[1]); }
             })(msg.m[0]);
         };
-        this.webSocket.onclose = function (code, msg) {
-            _this.events.emit('disconnect', code, msg);
+        this.webSocket.onclose = function (event) {
+            clearInterval(pingInterval);
+            _this.events.emit('disconnect', event.code, event.reason);
+            if (_this.autoReconnect && event.code !== 1000)
+                return _this.inReconnectionState ? '' : _this.reconnection();
+            _this.events.removeAllEvents();
+            for (var key in _this)
+                if (_this.hasOwnProperty(key)) {
+                    _this[key] = null;
+                    delete _this[key];
+                }
         };
     };
     Socket.prototype.subscribe = function (channel) {
@@ -211,6 +233,21 @@ var Socket = (function () {
     };
     Socket.prototype.send = function (event, data, type) {
         this.webSocket.send(messages_1.socketMessages(event, data, type || 'emit'));
+    };
+    Socket.prototype.reconnection = function () {
+        var _this = this;
+        this.inReconnectionState = true;
+        var interval = setInterval(function () {
+            if (_this.webSocket.readyState === _this.webSocket.CLOSED) {
+                _this.reconnectionAttempted++;
+                if (_this.options.reconnectionAttempts !== 0 && _this.reconnectionAttempted >= _this.options.reconnectionAttempts) {
+                    clearInterval(interval);
+                    _this.autoReconnect = false;
+                    _this.inReconnectionState = false;
+                }
+                _this.connect(interval);
+            }
+        }, this.options.reconnectionInterval);
     };
     return Socket;
 }());
@@ -235,7 +272,7 @@ var Channel = (function () {
         return this;
     };
     Channel.prototype.publish = function (data) {
-        this.socket.send(this.channel, data, 'publish');
+        this.channel ? this.socket.send(this.channel, data, 'publish') : '';
         return this;
     };
     Channel.prototype.message = function (data) {
@@ -244,6 +281,12 @@ var Channel = (function () {
     };
     Channel.prototype.unsubscribe = function () {
         this.socket.send('unsubscribe', this.channel, 'system');
+        this.socket.channels[this.channel] = null;
+        for (var key in this)
+            if (this.hasOwnProperty(key)) {
+                this[key] = null;
+                delete this[key];
+            }
     };
     Channel.prototype.subscribe = function () {
         this.socket.send('subscribe', this.channel, 'system');
@@ -278,18 +321,8 @@ var EventEmitter = (function () {
         }
         fp_1._.map(function (listener) { return listener.call.apply(listener, [null].concat(args)); }, this._events[event]);
     };
-    EventEmitter.prototype.removeListener = function (event, listener) {
-        var _this = this;
-        fp_1._.map(function (l, index) { return l === listener ? _this._events[event].splice(index, 1) : ''; }, this._events[event]);
-    };
-    EventEmitter.prototype.removeEvent = function (event) {
-        this._events[event] = null;
-    };
     EventEmitter.prototype.removeAllEvents = function () {
         this._events = {};
-    };
-    EventEmitter.prototype.exist = function (event) {
-        return this._events[event];
     };
     return EventEmitter;
 }());
@@ -335,8 +368,8 @@ var Options = (function () {
         this.url = configurations.url;
         this.port = configurations.port;
         this.autoReconnect = configurations.autoReconnect || false;
-        this.reconnectionInterval = configurations.reconnectInterval || 10000;
-        this.reconnectionAttempts = configurations.reconnectAttempts || 0;
+        this.reconnectionInterval = configurations.reconnectionInterval || 1000;
+        this.reconnectionAttempts = configurations.reconnectionAttempts || 0;
     }
     return Options;
 }());
