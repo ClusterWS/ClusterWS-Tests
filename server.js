@@ -4,7 +4,8 @@ const path = require('path')
 
 let cws = new ClusterWS({
     worker: Worker,
-    workers: 2
+    workers: 2,
+    pingInterval: 5000
 })
 
 function Worker() {
@@ -41,6 +42,9 @@ function Worker() {
         })
         socket.on('Null', (data)=>{
             socket.send('Null', data)
+        })
+        socket.on('fail connection', ()=>{
+            socket.disconnect(3000)
         })
     })
 }

@@ -1,20 +1,3 @@
-// let socket;
-// let count = 0
-// beforeEach((done) => {
-//     socket[count] = new ClusterWS({
-//         url: 'localhost',
-//         port: 80
-//     })
-//     done(null)
-// })
-
-// before(()=>{
-//     socket = new ClusterWS({
-//         url: 'localhost',
-//         port: 80
-//     })
-// })
-
 describe("Connect & Disconnect socket", () => {
     let socket
     before(() => {
@@ -30,11 +13,28 @@ describe("Connect & Disconnect socket", () => {
     })
 
     it('Should disconnect socket', (done) => {
-        console.log(socket)
         socket.on('disconnect', () => {
             done(null)
         })
         socket.disconnect()
+    })
+
+    it('Should reconnect on lost connection', (done) => {
+        let socket2 = new ClusterWS({
+            url: 'localhost',
+            port: 80,
+            autoReconnect: true,
+            reconnectionInterval: 20
+        })
+        let i = 0
+        socket2.on('connect', () => {
+            i++
+            if (i > 1) return (() => {
+                done(null)
+                socket2.disconnect()
+            })()
+            socket2.send('fail connection')
+        })
     })
 })
 
@@ -95,7 +95,6 @@ describe("Send & Receive events", () => {
         })
         socket.send('Object', { m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] })
     })
-
     it('Should send and get Null', (done) => {
         socket.on('Null', (msg) => {
             chai.expect(msg).to.eql(null);
