@@ -2,6 +2,16 @@
 
 This is a repository to test **ClusterWS** builds:
 
+### Configuration
+
+```js
+npm install
+```
+
+```js
+npm start
+```
+
 Server: 
 
 [ClusterWS](https://github.com/goriunov/ClusterWS)
