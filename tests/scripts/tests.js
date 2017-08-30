@@ -1,3 +1,8 @@
+
+/* 
+    Test connection to tje server and right disconection from the server
+    make sure that reconnection will work on lost connection
+*/
 describe("Connect & Disconnect socket", () => {
     let socket
     before(() => {
