@@ -1,6 +1,6 @@
 # ClusterWS Tests repository
 
-This is a repository to test **ClusterWS** builds:
+This repository is to test **ClusterWS** builds:
 
 ### Configuration
 
