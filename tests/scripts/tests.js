@@ -43,6 +43,8 @@ describe("Connect & Disconnect socket", () => {
     })
 })
 
+/* Make sure that send and recive events are working */
+
 describe("Send & Receive events", () => {
     let socket
     before(() => {
@@ -110,6 +112,8 @@ describe("Send & Receive events", () => {
     })
 })
 
+
+/* Make sure that publish and subscribe events are working */
 
 describe("Publish & Subscribe", () => {
     let socket
