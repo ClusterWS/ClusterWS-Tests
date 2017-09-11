@@ -21,6 +21,7 @@ function Worker() {
         setTimeout(()=>{
             socketServer.publish('from server', 'i am server')
         }, 50)
+        
         socket.on('Hello', (data)=>{
             socket.send('Hello', data)
         })
