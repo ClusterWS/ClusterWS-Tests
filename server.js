@@ -5,7 +5,8 @@ const path = require('path')
 let cws = new ClusterWS({
     worker: Worker,
     workers: 2,
-    pingInterval: 5000
+    pingInterval: 5000,
+    port: process.env.PORT || 80
 })
 
 function Worker() {
@@ -17,34 +18,38 @@ function Worker() {
 
     httpServer.on('request', app)
 
-    socketServer.on('connection', (socket)=>{
-        setTimeout(()=>{
+    socketServer.on('connection', (socket) => {
+        setTimeout(() => {
             socketServer.publish('from server', 'i am server')
         }, 50)
-        
-        socket.on('Hello', (data)=>{
+
+        socket.on('test', (time) => {
+            socket.send('test', time)
+        })
+
+        socket.on('Hello', (data) => {
             socket.send('Hello', data)
         })
 
-        socket.on('String', (data)=>{
+        socket.on('String', (data) => {
             socket.send('String', data)
         })
-        socket.on('Boolean', (data)=>{
+        socket.on('Boolean', (data) => {
             socket.send('Boolean', data)
         })
-        socket.on('Number', (data)=>{
+        socket.on('Number', (data) => {
             socket.send('Number', data)
         })
-        socket.on('Array', (data)=>{
+        socket.on('Array', (data) => {
             socket.send('Array', data)
         })
-        socket.on('Object', (data)=>{
+        socket.on('Object', (data) => {
             socket.send('Object', data)
         })
-        socket.on('Null', (data)=>{
+        socket.on('Null', (data) => {
             socket.send('Null', data)
         })
-        socket.on('fail connection', ()=>{
+        socket.on('fail connection', () => {
             socket.disconnect(3000)
         })
     })

@@ -1,6 +1,6 @@
 
 /* 
-    Test connection to tje server and right disconection from the server
+    Test connection to the server and right disconection from the server
     make sure that reconnection will work on lost connection
 */
 describe("Connect & Disconnect socket", () => {
@@ -55,6 +55,7 @@ describe("Send & Receive events", () => {
     it('Should emit an event and get response', (done) => {
         socket.on('connect', () => {
             socket.on('Hello', (msg) => {
+                console.log('hello')
                 chai.expect(msg).to.equal('world');
                 done(null)
             })
@@ -64,6 +65,8 @@ describe("Send & Receive events", () => {
 
     it('Should send and get String', (done) => {
         socket.on('String', (msg) => {
+            console.log('String')
+            
             chai.expect(msg).to.equal('string');
             done(null)
         })
@@ -72,6 +75,8 @@ describe("Send & Receive events", () => {
 
     it('Should send and get Boolean', (done) => {
         socket.on('Boolean', (msg) => {
+            console.log('Boolean')
+            
             chai.expect(msg).to.equal(true);
             done(null)
         })
@@ -80,6 +85,8 @@ describe("Send & Receive events", () => {
 
     it('Should send and get Number', (done) => {
         socket.on('Number', (msg) => {
+            console.log('Number')
+            
             chai.expect(msg).to.equal(4);
             done(null)
         })
