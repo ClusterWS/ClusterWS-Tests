@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ClusterWS Tests</title>
+</head>
+
+<body>
+    <script src="script/ClusterWS.js"></script>
+
+    <script>
+        let socket = new ClusterWS({
+            url: 'localhost',
+            port: 8080,
+            autoReconnect: true,
+            reconnectionIntervalMin: 10,
+            reconnectionIntervalMax: 20
+        })
+
+        let connected = false
+        let channel
+        socket.on('connect', () => {
+            console.log('connected back')
+
+            if (connected) {
+                channel.publish('reconnected')
+                return
+            }
+
+            connected = true
+            channel = socket.subscribe('reconnection').watch((msg) => {
+                console.log(msg)
+                // chai.expect(msg).to.eql('reconnected')
+                // done(null)
+            })
+
+            socket.disconnect(3000)
+        })
+        socket.on('disconnect', ()=>{
+            console.log('disconnected')
+        })
+
+        setTimeout(() => {
+            channel.publish('reconnected')
+        }, 2000)
+    </script>
+</body>
+
+</html>

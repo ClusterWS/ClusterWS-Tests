@@ -1,35 +1,30 @@
-const ClusterWS = require('./ClusterWS-server/index').ClusterWS
-const express = require('express')
-const path = require('path')
+let ClusterWS = require('./Server/index').ClusterWS
+
+let Koa = require('koa')
+let serve = require('koa-static')
+let compress = require('koa-compress')
 
 let cws = new ClusterWS({
-    worker: Worker,
+    port: 8080,
     workers: 2,
-    pingInterval: 5000,
-    port: process.env.PORT || 80
+    worker: Worker,
+    pingInterval: 300
 })
 
 function Worker() {
     let httpServer = this.httpServer
     let socketServer = this.socketServer
 
-    let app = express()
-    app.use('/', express.static(path.join(__dirname + '/tests')))
+    let app = new Koa()
+    app.use(compress({
+        threshold: 2048,
+        flush: require('zlib').Z_SYNC_FLUSH
+    }))
+    app.use(serve(__dirname + '/Client'))
 
-    httpServer.on('request', app)
+    httpServer.on('request', app.callback())
 
     socketServer.on('connection', (socket) => {
-        setTimeout(() => {
-            socketServer.publish('from server', 'i am server')
-        }, 50)
-
-        socket.on('test', (time) => {
-            socket.send('test', time)
-        })
-
-        socket.on('Hello', (data) => {
-            socket.send('Hello', data)
-        })
 
         socket.on('String', (data) => {
             socket.send('String', data)
@@ -49,8 +44,9 @@ function Worker() {
         socket.on('Null', (data) => {
             socket.send('Null', data)
         })
-        socket.on('fail connection', () => {
-            socket.disconnect(3000)
+
+        socket.on('publish', (data)=>{
+            socketServer.publish('hello', data)
         })
     })
 }
