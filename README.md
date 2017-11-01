@@ -7,8 +7,12 @@ Current versions are passing all tests
 
 ## JavaScript
 
-[ClusterWS](https://github.com/goriunov/ClusterWS):  [![npm version](https://badge.fury.io/js/clusterws.svg)](https://badge.fury.io/js/clusterws)
+[ClusterWS Server](https://github.com/goriunov/ClusterWS)
 
-[ClusterWS Client JS](https://github.com/goriunov/ClusterWS-Client-JS):  [![npm version](https://badge.fury.io/js/clusterws-client-js.svg)](https://badge.fury.io/js/clusterws-client-js)
+ [![npm version](https://badge.fury.io/js/clusterws.svg)](https://badge.fury.io/js/clusterws)
+
+[ClusterWS Client JS](https://github.com/goriunov/ClusterWS-Client-JS)
+
+[![npm version](https://badge.fury.io/js/clusterws-client-js.svg)](https://badge.fury.io/js/clusterws-client-js)
 
 ![](./test-results-javascript.png)
