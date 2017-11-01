@@ -182,7 +182,6 @@ describe('Channels', () => {
         }).publish({ m: 15, s: 'hello', f: false, n: null, l: { m: '5', s: true }, a: [1, 'true', null] })
     })
 
-
     it('Should get message which is published by another user', (done) => {
         let socket2 = new ClusterWS({
             url: 'localhost',
@@ -197,7 +196,6 @@ describe('Channels', () => {
             socket2.disconnect()
         })
     })
-
 
     it('Should get message which is published by server', (done) => {
         socket.subscribe('hello').watch((msg) => {
@@ -235,7 +233,9 @@ describe('Channels', () => {
         socket.on('connect', () => {
             if (connected) {
                 channel.publish('reconnected')
-                return
+                return setTimeout(() => {
+                    socket.disconnect()
+                }, 30)
             }
             connected = true
             channel = socket.subscribe('reconnection').watch((msg) => {
