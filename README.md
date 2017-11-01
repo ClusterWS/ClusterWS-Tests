@@ -1,29 +1,18 @@
 # ClusterWS Tests
 
+This is official ClusterWS Test repository for all libraries (Android, IOS, Javascript).
+
 Current versions are passing all tests
 
-[ClusterWS](https://github.com/goriunov/ClusterWS):  [![npm version](https://badge.fury.io/js/clusterws.svg)](https://badge.fury.io/js/clusterws)
 
-[ClusterWS Client JS](https://github.com/goriunov/ClusterWS-Client-JS):  [![npm version](https://badge.fury.io/js/clusterws-client-js.svg)](https://badge.fury.io/js/clusterws-client-js)
+## JavaScript
 
-![](./test-results.png)
+[ClusterWS Server](https://github.com/goriunov/ClusterWS)
 
-To run tests clone the repo with:
+ [![npm version](https://badge.fury.io/js/clusterws.svg)](https://badge.fury.io/js/clusterws)
 
-```
-git clone https://github.com/goriunov/ClusterWS-Tests.git
-```
+[ClusterWS Client JS](https://github.com/goriunov/ClusterWS-Client-JS)
 
-then run in cloned folder:
+[![npm version](https://badge.fury.io/js/clusterws-client-js.svg)](https://badge.fury.io/js/clusterws-client-js)
 
-```
-npm install
-```
-
-and to run it eventually:
-
-```
-npm start
-```
-
-check `http://localhost:8080`
+![](./test-results-javascript.png)
