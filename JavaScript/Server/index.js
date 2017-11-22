@@ -295,7 +295,6 @@ module.exports = function(e) {
             }, "system"), this.socket.on("error", function(e) {
                 return t.events.emit("error", e);
             }), this.socket.on("message", function(e) {
-                console.log(e)
                 if (t.server.options.useBinary && "string" != typeof e && (e = Buffer.from(e).toString()), 
                 "#" === e[0] && "1" === e[1]) return t.missedPing = 0;
                 try {
