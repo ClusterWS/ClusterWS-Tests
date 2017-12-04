@@ -1,18 +1,28 @@
 let ClusterWS = require('./Server/index').ClusterWS
+let fs = require('fs')
 
 let Koa = require('koa')
 let serve = require('koa-static')
 let compress = require('koa-compress')
 
 let cws = new ClusterWS({
-    port: 8080,
+    // port: 8080,
     workers: 2,
     worker: Worker,
-    pingInterval: 300
+    pingInterval: 100,
+    useBinary: true,
+    machineScale: {
+        master: true,
+        port: 8081,
+    },
+    secureProtocolOptions: {
+        key: fs.readFileSync('./ssl/server-key.pem'),
+        cert: fs.readFileSync('./ssl/server-cert.pem')
+    }
 })
 
 function Worker() {
-    let httpServer = this.httpServer
+    let httpsServer = this.httpsServer
     let socketServer = this.socketServer
 
     let app = new Koa()
@@ -22,7 +32,7 @@ function Worker() {
     }))
     app.use(serve(__dirname + '/Client'))
 
-    httpServer.on('request', app.callback())
+    httpsServer.on('request', app.callback())
 
     socketServer.on('connection', (socket) => {
 
@@ -45,7 +55,7 @@ function Worker() {
             socket.send('Null', data)
         })
 
-        socket.on('publish', (data)=>{
+        socket.on('publish', (data) => {
             socketServer.publish('hello', data)
         })
     })
