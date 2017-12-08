@@ -16,11 +16,10 @@
             url: 'localhost',
             port: 443,
             autoReconnect: true,
+            secure: true,
             reconnectionIntervalMin: 100,
-            reconnectionIntervalMax: 200,
-            secure: true
+            reconnectionIntervalMax: 200
         })
-
 
         let connected = false
         let channel
@@ -31,13 +30,14 @@
             console.log('conencted')
         })
 
-        console.log('here')
         document.getElementById('send').onclick = () => {
-            console.log('here')
-            channel.publish('My supper message')
+            channel.publish({ "message": "this is only a test" })
         }
         socket.on('disconnect', () => {
             console.log('disconnected')
+        })
+        socket.on('String', (data) => {
+            console.log(data)
         })
     </script>
 </body>

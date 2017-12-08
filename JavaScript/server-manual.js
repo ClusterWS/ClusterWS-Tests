@@ -6,7 +6,7 @@ let serve = require('koa-static')
 let compress = require('koa-compress')
 
 let cws = new ClusterWS({
-    port: 8080,
+    port: 443,
     workers: 2,
     worker: Worker,
     pingInterval: 100,
@@ -14,11 +14,15 @@ let cws = new ClusterWS({
     machineScale: {
         master: true,
         port: 8081,
+    },
+    secureProtocolOptions: {
+        key: fs.readFileSync('./ssl/server-key.pem'),
+        cert: fs.readFileSync('./ssl/server-cert.pem')
     }
 })
 
 function Worker() {
-    let httpServer = this.httpServer
+    let server = this.httpsServer
     let socketServer = this.socketServer
 
     let app = new Koa()
@@ -28,30 +32,16 @@ function Worker() {
     }))
     app.use(serve(__dirname + '/Client'))
 
-    httpServer.on('request', app.callback())
-
+    server.on('request', app.callback())
+    socketServer.setMiddleware('onsubscribe', (socket, channel, next) => {
+        next(true)
+    })
+    socketServer.on('verifyConnection', (info, callback) => {
+        callback(true)
+    })
     socketServer.on('connection', (socket) => {
         socket.on('String', (data) => {
             socket.send('String', data)
-        })
-        socket.on('Boolean', (data) => {
-            socket.send('Boolean', data)
-        })
-        socket.on('Number', (data) => {
-            socket.send('Number', data)
-        })
-        socket.on('Array', (data) => {
-            socket.send('Array', data)
-        })
-        socket.on('Object', (data) => {
-            socket.send('Object', data)
-        })
-        socket.on('Null', (data) => {
-            socket.send('Null', data)
-        })
-
-        socket.on('publish', (data) => {
-            socketServer.publish('hello', data)
         })
     })
 }
