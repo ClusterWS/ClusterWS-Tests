@@ -7,43 +7,38 @@
 </head>
 
 <body>
+    <button type="button" id="send">Send message</button>
+
     <script src="script/ClusterWS.js"></script>
 
     <script>
         let socket = new ClusterWS({
             url: 'localhost',
-            port: 8080,
+            port: 443,
             autoReconnect: true,
-            reconnectionIntervalMin: 10,
-            reconnectionIntervalMax: 20
+            secure: true,
+            reconnectionIntervalMin: 100,
+            reconnectionIntervalMax: 200
         })
 
         let connected = false
         let channel
         socket.on('connect', () => {
-            console.log('connected back')
-
-            if (connected) {
-                channel.publish('reconnected')
-                return
-            }
-
-            connected = true
-            channel = socket.subscribe('reconnection').watch((msg) => {
-                console.log(msg)
-                // chai.expect(msg).to.eql('reconnected')
-                // done(null)
+            channel = socket.subscribe('getMessages').watch((message) => {
+                console.log(message)
             })
-
-            socket.disconnect(3000)
+            console.log('conencted')
         })
-        socket.on('disconnect', ()=>{
+
+        document.getElementById('send').onclick = () => {
+            channel.publish({ "message": "this is only a test" })
+        }
+        socket.on('disconnect', () => {
             console.log('disconnected')
         })
-
-        setTimeout(() => {
-            channel.publish('reconnected')
-        }, 2000)
+        socket.on('String', (data) => {
+            console.log(data)
+        })
     </script>
 </body>
 
