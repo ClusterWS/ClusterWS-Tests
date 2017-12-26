@@ -7,12 +7,12 @@
     return function(e) {
         function t(o) {
             if (n[o]) return n[o].exports;
-            var r = n[o] = {
+            var i = n[o] = {
                 i: o,
                 l: !1,
                 exports: {}
             };
-            return e[o].call(r.exports, r, r.exports, t), r.l = !0, r.exports;
+            return e[o].call(i.exports, i, i.exports, t), i.l = !0, i.exports;
         }
         var n = {};
         return t.m = e, t.c = n, t.d = function(e, n, o) {
@@ -44,19 +44,17 @@
         Object.defineProperty(t, "__esModule", {
             value: !0
         });
-        var o = n(2), r = n(3), i = n(4), s = n(0), c = function() {
+        var o = n(2), i = n(3), r = n(4), s = n(0), c = function() {
             function e(e) {
-                return this.channels = {}, this.missedPing = 0, this.events = new r.EventEmitter(), 
-                this.useBinary = !1, e.url && "string" == typeof e.url ? e.port && "number" == typeof e.port ? (this.options = {
+                return this.channels = {}, this.missedPing = 0, this.events = new i.EventEmitter(), 
+                this.useBinary = !1, e.url && "string" == typeof e.url ? (this.options = {
                     url: e.url,
-                    port: e.port,
                     autoReconnect: e.autoReconnect || !1,
                     reconnectionIntervalMin: e.reconnectionIntervalMin || 1e3,
                     reconnectionIntervalMax: e.reconnectionIntervalMax || 5e3,
-                    reconnectionAttempts: e.reconnectionAttempts || 0,
-                    secure: e.secure || !1
-                }, this.options.reconnectionIntervalMin > this.options.reconnectionIntervalMax ? s.logError("reconnectionIntervalMin can not be more then reconnectionIntervalMax") : (this.reconnection = new i.Reconnection(this), 
-                void this.create())) : s.logError("Port must be provided and it must be number") : s.logError("Url must be provided and it must be string");
+                    reconnectionAttempts: e.reconnectionAttempts || 0
+                }, this.options.reconnectionIntervalMin > this.options.reconnectionIntervalMax ? s.logError("reconnectionIntervalMin can not be more then reconnectionIntervalMax") : (this.reconnection = new r.Reconnection(this), 
+                void this.create())) : s.logError("Url must be provided and it must be string");
             }
             return e.buffer = function(e) {
                 for (var t = e.length, n = new Uint8Array(t), o = 0; o < t; o++) n[o] = e.charCodeAt(o);
@@ -67,13 +65,13 @@
                     return e.events.emit(t["#"][1], t["#"][2]);
 
                   case "p":
-                    return e.channels[t["#"][1]] ? e.channels[t["#"][1]].onMessage(t["#"][2]) : "";
+                    return e.channels[t["#"][1]] ? e.channels[t["#"][1]].onMessage(t["#"][2]) : null;
 
                   case "s":
                     switch (t["#"][1]) {
                       case "c":
                         e.pingInterval = setInterval(function() {
-                            return e.missedPing++ > 2 ? e.disconnect(4001, "Did not get pings") : "";
+                            return e.missedPing++ > 2 ? e.disconnect(4001, "Did not get pings") : null;
                         }, t["#"][2].ping), e.useBinary = t["#"][2].binary, e.events.emit("connect");
                     }
                 }
@@ -111,15 +109,15 @@
                     }
                 }
             }, e.prototype.create = function() {
-                var t = this, n = window.MozWebSocket || window.WebSocket, o = this.options.secure ? "wss://" : "ws://";
-                this.websocket = new n(o + this.options.url + ":" + this.options.port), this.websocket.binaryType = "arraybuffer", 
+                var t = this, n = window.MozWebSocket || window.WebSocket;
+                this.websocket = new n(this.options.url), this.websocket.binaryType = "arraybuffer", 
                 this.websocket.onopen = function() {
                     return t.reconnection.isConnected();
                 }, this.websocket.onerror = function(e) {
                     return t.events.emit("error", e.message);
                 }, this.websocket.onmessage = function(n) {
                     var o = n.data;
-                    if (t.useBinary && "string" != typeof o && (o = String.fromCharCode.apply(null, new Uint8Array(o))), 
+                    if ("string" != typeof o && (o = String.fromCharCode.apply(null, new Uint8Array(o))), 
                     "#0" === o) return t.missedPing = 0, t.send("#1", null, "ping");
                     try {
                         o = JSON.parse(o);
@@ -132,7 +130,7 @@
                     !t.reconnection.inReconnectionState) {
                         if (t.options.autoReconnect && 1e3 !== e.code) return t.reconnection.reconnect();
                         t.events.removeAllEvents();
-                        for (var n in t) t.hasOwnProperty(n) && delete t[n];
+                        for (var n in t) t[n] && (t[n] = null);
                     }
                 };
             }, e.prototype.on = function(e, t) {
@@ -155,7 +153,7 @@
         Object.defineProperty(t, "__esModule", {
             value: !0
         });
-        var o = n(0), r = function() {
+        var o = n(0), i = function() {
             function e(e, t) {
                 this.socket = e, this.channel = t, this.subscribe();
             }
@@ -172,13 +170,13 @@
                 this.socket.send("subscribe", this.channel, "system");
             }, e;
         }();
-        t.Channel = r;
+        t.Channel = i;
     }, function(e, t, n) {
         "use strict";
         Object.defineProperty(t, "__esModule", {
             value: !0
         });
-        var o = n(0), r = function() {
+        var o = n(0), i = function() {
             function e() {
                 this.events = {};
             }
@@ -193,7 +191,7 @@
                 this.events = {};
             }, e;
         }();
-        t.EventEmitter = r;
+        t.EventEmitter = i;
     }, function(e, t, n) {
         "use strict";
         Object.defineProperty(t, "__esModule", {
@@ -207,7 +205,7 @@
             return e.prototype.isConnected = function() {
                 clearTimeout(this.timer), clearInterval(this.interval), this.inReconnectionState = !1, 
                 this.reconnectionAttempted = 0;
-                for (var e in this.socket.channels) this.socket.channels.hasOwnProperty(e) && this.socket.channels[e].subscribe();
+                for (var e in this.socket.channels) this.socket.channels[e] && this.socket.channels[e].subscribe();
             }, e.prototype.reconnect = function() {
                 var e = this;
                 this.inReconnectionState = !0, this.interval = setInterval(function() {
