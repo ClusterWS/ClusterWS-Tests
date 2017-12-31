@@ -3,9 +3,8 @@ const ClusterWS = require('./index')
 const path = require('path')
 
 let clusterws = new ClusterWS({
-    port: 8080,
+    port: 443,
     worker: Worker,
-    pingInterval: 80,
     // Uncomment Next line to test binary
     // useBinary: true
 })
@@ -15,8 +14,8 @@ function Worker() {
     const socketServer = this.socketServer
 
     const app = express()
-    app.use(express.static(path.join(__dirname, '../Client')))
-
+    app.use(express.static(path.join(__dirname, '../Client'), { index: false }))
+    app.get('/', (req, res, next) => res.sendFile(path.join(__dirname, '../Client/index.manual.html')))
     httpServer.on('request', app)
 
     socketServer.on('connection', (socket) => {
