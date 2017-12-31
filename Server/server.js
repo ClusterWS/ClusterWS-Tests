@@ -1,5 +1,5 @@
 const express = require('express')
-const ClusterWS = require('./index').ClusterWS
+const ClusterWS = require('./index')
 const path = require('path')
 
 let clusterws = new ClusterWS({
@@ -7,7 +7,7 @@ let clusterws = new ClusterWS({
     worker: Worker,
     pingInterval: 80,
     // Uncomment Next line to test binary
-    useBinary: true
+    // useBinary: true
 })
 
 function Worker() {

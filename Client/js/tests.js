@@ -1,3 +1,5 @@
+console.log(ClusterWS)
+
 describe('Connect, Disconenct & Reconnect', function () {
     it('Should fire connect event on Connection', function (done) {
         var socket = new ClusterWS({

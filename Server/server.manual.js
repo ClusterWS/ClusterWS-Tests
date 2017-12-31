@@ -1,5 +1,5 @@
 const express = require('express')
-const ClusterWS = require('./index').ClusterWS
+const ClusterWS = require('./index')
 const path = require('path')
 
 let clusterws = new ClusterWS({
