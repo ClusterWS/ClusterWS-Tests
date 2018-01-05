@@ -1,12 +1,23 @@
 const express = require('express')
 const ClusterWS = require('./index')
 const path = require('path')
+const cluster = require('cluster')
+const fs = require('fs')
+
+if (cluster.isMaster) {
+    // make force proccess change connection
+    cluster.schedulingPolicy = cluster.SCHED_RR
+}
 
 let clusterws = new ClusterWS({
-    port: 443,
     worker: Worker,
+    workers: 2,
     // Uncomment Next line to test binary
-    // useBinary: true
+    useBinary: true,
+    tlsOptions: {
+        key: fs.readFileSync('./Server/ssl/server-key.pem'),
+        cert: fs.readFileSync('./Server/ssl/server-cert.pem')
+    }
 })
 
 function Worker() {
@@ -19,6 +30,7 @@ function Worker() {
     server.on('request', app)
 
     wss.on('connection', (socket) => {
+        console.log(process.pid)
         socket.on('echo', (message) => socket.send('echo', message))
         socket.on('publish', (data) => wss.publish('Messag From Server', data))
     })
