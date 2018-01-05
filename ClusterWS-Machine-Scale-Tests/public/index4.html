@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <button id="send">Send message</button>
+    <script src="./index.js"></script>
+    <script>
+        let socket = new ClusterWS({
+            url: 'ws://localhost:8007',
+            autoReconnect: true
+        })
+
+        let channel
+        socket.on('connect', () => {
+            channel = socket.subscribe('getMessages').watch((message) => {
+                console.log(message)
+            })
+            console.log('conencted')
+        })
+
+        document.getElementById('send').onclick = () => {
+            channel.publish('My supper message')
+        }
+        socket.on('disconnect', () => {
+            console.log('disconnected')
+        })
+
+    </script>
+</body>
+
+</html>
