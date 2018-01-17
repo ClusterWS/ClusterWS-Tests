@@ -23,6 +23,10 @@ function Worker() {
     app.get('/', (req, res, next) => res.sendFile(path.join(__dirname + '/public/index2.html')))
     server.on('request', app)
 
+    wss.setMiddleware('onMessageFromWorker', (data) => {
+        console.log(data)
+    })
+    
     wss.on('connection', (socket) => {
         console.log('user connected')
     })

@@ -24,6 +24,7 @@ function Worker() {
     server.on('request', app)
 
     wss.on('connection', (socket) => {
+        wss.sendToWorkers('Hello from another server')
         console.log('user connected')
     })
 }
