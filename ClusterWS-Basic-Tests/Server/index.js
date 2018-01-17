@@ -34,11 +34,8 @@ var EventEmitter = function() {
         this.events[e] ? this.events[e].push(r) : this.events[e] = [ r ];
     }, e.prototype.emitmany = function(e) {
         for (var r = [], n = 1; n < arguments.length; n++) r[n - 1] = arguments[n];
-        var t = this.events[e];
-        if (t) {
-            for (var o = 0, s = t.length; o < s; o++) (i = t[o]).call.apply(i, [ null ].concat(r));
-            var i;
-        }
+        var t, o = this.events[e];
+        if (o) for (var s = 0, i = o.length; s < i; s++) (t = o[s]).call.apply(t, [ null ].concat(r));
     }, e.prototype.removeListener = function(e, r) {
         var n = this.events[e];
         if (n) for (var t = 0, o = n.length; t < o; t++) if (n[t] === r) return n.splice(t, 1);
@@ -162,6 +159,9 @@ var Socket = function() {
         }), t.setBroker(s);
     }, e.Server = function(r, n, t) {
         var o, s = [];
+        function i(e, r) {
+            for (var n = 0, t = s.length; n < t; n++) s[n].id !== e && s[n].send(r);
+        }
         new WebSocket.Server({
             port: r
         }, function() {
@@ -172,11 +172,11 @@ var Socket = function() {
         }).on("connection", function(e) {
             var r = !1, c = setTimeout(function() {
                 return e.close(4e3, "Not Authenticated");
-            }, 5e3), u = setInterval(function() {
+            }, 5e3), a = setInterval(function() {
                 return e.send("#0");
             }, 2e4);
-            e.on("message", function(u) {
-                switch (u) {
+            e.on("message", function(a) {
+                switch (a) {
                   case "#1":
                     return;
 
@@ -188,9 +188,9 @@ var Socket = function() {
                         s.push(r);
                     }(e), clearTimeout(c);
                 }
-                r && (i(e.id, u), o && t && o.send(u));
+                r && (i(e.id, a), o && t && o.send(a));
             }), e.on("close", function() {
-                if (clearTimeout(c), clearInterval(u), r) for (var n = 0, t = s.length; n < t; n++) if (s[n].id === e.id) return s.splice(n, 1);
+                if (clearTimeout(c), clearInterval(a), r) for (var n = 0, t = s.length; n < t; n++) if (s[n].id === e.id) return s.splice(n, 1);
             });
         }), t && e.Client("ws://" + (t.master ? "127.0.0.1" : t.url) + ":" + t.port, t.key || "", {
             broadcastMessage: i,
@@ -198,9 +198,6 @@ var Socket = function() {
                 return o = e;
             }
         });
-        function i(e, r) {
-            for (var n = 0, t = s.length; n < t; n++) s[n].id !== e && s[n].send(r);
-        }
     }, e;
 }(), extendStatics = Object.setPrototypeOf || {
     __proto__: []
@@ -211,31 +208,37 @@ var Socket = function() {
 };
 
 function __extends(e, r) {
-    extendStatics(e, r);
     function n() {
         this.constructor = e;
     }
-    e.prototype = null === r ? Object.create(r) : (n.prototype = r.prototype, new n());
+    extendStatics(e, r), e.prototype = null === r ? Object.create(r) : (n.prototype = r.prototype, 
+    new n());
 }
 
 var WSServer = function(e) {
-    __extends(r, e);
     function r() {
         var r = null !== e && e.apply(this, arguments) || this;
         return r.middleware = {}, r;
     }
-    return r.prototype.publish = function(e, r) {
-        this.broker.send(Buffer.from(JSON.stringify({
-            channel: e,
-            data: r
-        }))), this.emitmany("#publish", {
-            channel: e,
-            data: r
-        });
-    }, r.prototype.setMiddleware = function(e, r) {
+    return __extends(r, e), r.prototype.setMiddleware = function(e, r) {
         this.middleware[e] = r;
+    }, r.prototype.sendToWorkers = function(e) {
+        this.broker.send(Buffer.from(JSON.stringify({
+            channel: "sendToWorkers",
+            data: e
+        }))), this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(e);
+    }, r.prototype.publish = function(e, r) {
+        "sendToWorkers" !== e && (this.broker.send(Buffer.from(JSON.stringify({
+            channel: e,
+            data: r
+        }))), this.middleware.onpublish && this.middleware.onpublish(e, r), this.emitmany("#publish", {
+            channel: e,
+            data: r
+        }));
     }, r.prototype.broadcastMessage = function(e, r) {
-        this.emitmany("#publish", JSON.parse(Buffer.from(r).toString()));
+        var n = JSON.parse(Buffer.from(r).toString());
+        if ("sendToWorkers" === n.channel) return this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(n.data);
+        this.middleware.onpublish && this.middleware.onpublish(n.channel, n.data), this.emitmany("#publish", n);
     }, r.prototype.setBroker = function(e) {
         this.broker = e;
     }, r;
@@ -276,7 +279,6 @@ var WSServer = function(e) {
     }
     return e.master = function(e) {
         var r = !1, n = randomString(16), t = {};
-        e.scaleOptions && e.scaleOptions.master ? o("Scaler", -1) : o("Broker", 0);
         function o(s, i) {
             var c = cluster.fork();
             c.send({
@@ -289,7 +291,7 @@ var WSServer = function(e) {
                     if ("Broker" === n) for (var c = 1; c <= e.workers; c++) o("Worker", c);
                     if (t[s] = i, Object.keys(t).length === e.workers + 1) {
                         r = !0, logReady(">>> Master on: " + e.port + ", PID: " + process.pid + (e.tlsOptions ? " (secure)" : ""));
-                        for (var u in t) t[u] && "0" === u ? logReady(">>> Broker on: " + e.brokerPort + ", PID " + t[u]) : logReady("       Worker: " + u + ", PID " + t[u]);
+                        for (var a in t) t[a] && "0" === a ? logReady(">>> Broker on: " + e.brokerPort + ", PID " + t[a]) : logReady("       Worker: " + a + ", PID " + t[a]);
                     }
                 }(s, i, n.pid);
             }), c.on("exit", function() {
@@ -297,6 +299,7 @@ var WSServer = function(e) {
                 o(s, i));
             });
         }
+        e.scaleOptions && e.scaleOptions.master ? o("Scaler", -1) : o("Broker", 0);
     }, e.worker = function(e) {
         process.on("message", function(r) {
             switch (r.processName) {
@@ -315,4 +318,4 @@ var WSServer = function(e) {
     }, e;
 }();
 
-module.exports = ClusterWS;
+module.exports = ClusterWS, module.exports.default = ClusterWS;

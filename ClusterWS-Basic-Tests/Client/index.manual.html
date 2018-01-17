@@ -14,7 +14,8 @@
     <script src="js/ClusterWS.js"></script>
     <script>
         var socket = new ClusterWS({
-            url: 'wss://localhost:443'
+            url: 'wss://localhost:443',
+            autoReconnect: true
         })
         socket.on('connect', function () {
             console.log('Socket is connected')

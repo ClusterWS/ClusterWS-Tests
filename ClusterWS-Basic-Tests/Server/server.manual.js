@@ -29,9 +29,18 @@ function Worker() {
     app.get('/', (req, res, next) => res.sendFile(path.join(__dirname, '../Client/index.manual.html')))
     server.on('request', app)
 
+    wss.setMiddleware('onMessageFromWorker', (data) => {
+        console.log(data)
+    })
+
+    wss.sendToWorkers('message')
+
     wss.on('connection', (socket) => {
+
         console.log(process.pid)
-        socket.on('echo', (message) => socket.send('echo', message))
+        socket.on('echo', (message) => {
+            socket.send('echo', message)
+        })
         socket.on('publish', (data) => wss.publish('Messag From Server', data))
     })
 }
