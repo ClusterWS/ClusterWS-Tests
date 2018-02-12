@@ -16,10 +16,10 @@ let clusterws = new ClusterWS({
     brokers: 3,
     // Uncomment Next line to test binary
     // useBinary: true,
-    tlsOptions: {
-        key: fs.readFileSync('./Server/ssl/server-key.pem'),
-        cert: fs.readFileSync('./Server/ssl/server-cert.pem')
-    }
+    // tlsOptions: {
+    //     key: fs.readFileSync('./Server/ssl/server-key.pem'),
+    //     cert: fs.readFileSync('./Server/ssl/server-cert.pem')
+    // }
 })
 
 function Worker() {
@@ -31,13 +31,9 @@ function Worker() {
     app.get('/', (req, res, next) => res.sendFile(path.join(__dirname, '../Client/index.manual.html')))
     server.on('request', app)
 
-    wss.setMiddleware('onMessageFromWorker', (data) => {
-        console.log(data)
-    })
-
     wss.on('connection', (socket) => {
-
-        console.log(process.pid)
+        console.log('connected')
+        wss.publishToWorkers('Hello world')
         socket.on('echo', (message) => {
             socket.send('echo', message)
         })
