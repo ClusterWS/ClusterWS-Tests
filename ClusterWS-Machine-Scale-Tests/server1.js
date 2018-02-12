@@ -1,14 +1,24 @@
 const express = require('express')
 const ClusterWS = require('./index')
 const path = require("path")
+const fs = require('fs')
 
 new ClusterWS({
     worker: Worker,
     port: 8001,
-    brokerPort: 8002,
-    scaleOptions: {
-        master: true,
-        port: 8000
+    brokersPorts: [8002],
+    horizontalScaleOptions: {
+        masterOptions: {
+            port: 8080,
+            tlsOptions: {
+                key: fs.readFileSync('./ssl/server-key.pem'),
+                cert: fs.readFileSync('./ssl/server-cert.pem')
+            }
+        },
+        brokersUrls: [
+            'ws://localhost:8081'
+        ],
+        key: 'hello'
     }
 })
 
@@ -24,7 +34,6 @@ function Worker() {
     server.on('request', app)
 
     wss.on('connection', (socket) => {
-        wss.sendToWorkers('Hello from another server')
         console.log('user connected')
     })
 }

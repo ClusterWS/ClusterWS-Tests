@@ -10,10 +10,12 @@ if (cluster.isMaster) {
 }
 
 let clusterws = new ClusterWS({
+    port: 80,
     worker: Worker,
-    workers: 2,
+    workers: 3,
+    brokers: 3,
     // Uncomment Next line to test binary
-    useBinary: true,
+    // useBinary: true,
     tlsOptions: {
         key: fs.readFileSync('./Server/ssl/server-key.pem'),
         cert: fs.readFileSync('./Server/ssl/server-cert.pem')
@@ -32,8 +34,6 @@ function Worker() {
     wss.setMiddleware('onMessageFromWorker', (data) => {
         console.log(data)
     })
-
-    wss.sendToWorkers('message')
 
     wss.on('connection', (socket) => {
 
