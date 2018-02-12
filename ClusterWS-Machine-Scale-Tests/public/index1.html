@@ -22,6 +22,10 @@
             channel = socket.subscribe('getMessages').watch((message) => {
                 console.log(message)
             })
+            // setInterval(() => channel.publish('My supper message'), 1)
+            // setInterval(() => channel.publish('My supper message'), 1)
+            // setInterval(() => channel.publish('My supper message'), 1)
+
             console.log('conencted')
         })
 

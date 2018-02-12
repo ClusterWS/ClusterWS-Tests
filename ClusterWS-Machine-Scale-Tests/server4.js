@@ -6,10 +6,12 @@ const path = require("path")
 new ClusterWS({
     worker: Worker,
     port: 8007,
-    brokerPort: 8008,
-    scaleOptions: {
-        url: 'localhost',
-        port: 8000
+    brokersPorts: [8008],
+    horizontalScaleOptions: {
+        mastersUrls: [
+            'ws://localhost:8080',
+            'ws://localhost:8081'
+        ]
     }
 })
 

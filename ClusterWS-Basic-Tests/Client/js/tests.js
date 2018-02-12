@@ -128,6 +128,9 @@ describe('Send Events & Data', function () {
         })
         socket.send('Null', null)
     })
+    after(function () {
+        socket.disconnect()
+    })
 })
 
 describe('Pub/Sub', function () {
@@ -174,6 +177,9 @@ describe('Pub/Sub', function () {
             chai.expect(message).to.eql(null)
             done(null)
         }).publish(null)
+    })
+    after(function () {
+        socket.disconnect()
     })
 })
 

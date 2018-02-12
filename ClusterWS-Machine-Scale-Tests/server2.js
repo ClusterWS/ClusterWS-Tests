@@ -6,13 +6,17 @@ const path = require("path")
 new ClusterWS({
     worker: Worker,
     port: 8003,
-    brokerPort: 8004,
-    scaleOptions: {
-        url: 'localhost',
-        port: 8000
+    brokersPorts: [8004],
+    horizontalScaleOptions: {
+        masterOptions: {
+            port: 8081
+        },
+        brokersUrls: [
+            'wss://localhost:8080'
+        ],
+        key: 'hello'
     }
 })
-
 
 function Worker() {
     const wss = this.wss
@@ -26,7 +30,7 @@ function Worker() {
     wss.setMiddleware('onMessageFromWorker', (data) => {
         console.log(data)
     })
-    
+
     wss.on('connection', (socket) => {
         console.log('user connected')
     })

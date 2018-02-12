@@ -107,7 +107,10 @@ var ClusterWS = function() {
             }, this.websocket.onerror = function(t) {
                 return n.events.emit("error", t.message);
             }, this.websocket.onmessage = function(e) {
+                console.log(e.data);
                 var o = "string" != typeof e.data ? String.fromCharCode.apply(null, new Uint8Array(e.data)) : e.data;
+
+                console.log(o === "\"#0\"");
                 if ("#0" === o) return n.missedPing = 0, n.send("#1", null, "ping");
                 try {
                     o = JSON.parse(o);
