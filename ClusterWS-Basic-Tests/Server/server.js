@@ -6,9 +6,11 @@ let clusterws = new ClusterWS({
     port: 8080,
     worker: Worker,
     pingInterval: 80,
+    workers: 2,
     brokers: 2,
+    host: '127.0.0.2'
     // Uncomment Next line to test binary
-    useBinary: true
+    // useBinary: true
 })
 
 function Worker() {

@@ -1,7 +1,11 @@
+let PROTOCOL = 'ws'
+let PORT = 8080;
+let HOST = '127.0.0.2';
+
 describe('Connect, Disconenct & Reconnect', function () {
     it('Should fire connect event on Connection', function (done) {
         var socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         socket.on('connect', function () {
             done(null)
@@ -11,7 +15,7 @@ describe('Connect, Disconenct & Reconnect', function () {
 
     it('Should Disconnect', function (done) {
         var socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         socket.on('connect', function () {
             socket.disconnect()
@@ -23,7 +27,7 @@ describe('Connect, Disconenct & Reconnect', function () {
 
     it('Should reconnect on lost connection', function (done) {
         var socket = new ClusterWS({
-            url: 'ws://localhost:8080',
+            url: `${PROTOCOL}://${HOST}:${PORT}`,
             autoReconnect: true,
             reconnectionIntervalMin: 10,
             reconnectionIntervalMax: 20
@@ -44,7 +48,7 @@ describe('Connect, Disconenct & Reconnect', function () {
 describe('Ping & Pong', function () {
     it('Should stay alive', function (done) {
         var socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         var passed = false
         var timer = setTimeout(function () {
@@ -61,7 +65,7 @@ describe('Ping & Pong', function () {
 
     it('Should disconnect with out ping', function (done) {
         var socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         var passed = true
         var timer = setTimeout(function () {
@@ -82,7 +86,7 @@ describe('Send Events & Data', function () {
     var socket
     before(function (done) {
         socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         socket.on('connect', function () { done(null) })
     })
@@ -137,7 +141,7 @@ describe('Pub/Sub', function () {
     var socket
     before(function (done) {
         socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         socket.on('connect', function () { done(null) })
     })
@@ -187,7 +191,7 @@ describe('Channel\'s Functionality', function () {
     var socket
     before(function (done) {
         socket = new ClusterWS({
-            url: 'ws://localhost:8080'
+            url: `${PROTOCOL}://${HOST}:${PORT}`
         })
         socket.on('connect', function () { done(null) })
     })
@@ -197,7 +201,7 @@ describe('Channel\'s Functionality', function () {
             chai.expect(message).to.eql('message from another user')
             done(null)
         })
-        var socket2 = new ClusterWS({ url: 'ws://localhost:8080' })
+        var socket2 = new ClusterWS({ url: `${PROTOCOL}://${HOST}:${PORT}` })
         socket2.on('connect', function () {
             socket2.subscribe('Message').publish('message from another user')
             socket2.disconnect()
@@ -252,7 +256,7 @@ describe('Channel\'s Functionality', function () {
     })
     it('Should resubscribe on reconnection', function (done) {
         var socket2 = new ClusterWS({
-            url: 'ws://localhost:8080',
+            url: `${PROTOCOL}://${HOST}:${PORT}`,
             autoReconnect: true,
             reconnectionIntervalMin: 10,
             reconnectionIntervalMax: 20

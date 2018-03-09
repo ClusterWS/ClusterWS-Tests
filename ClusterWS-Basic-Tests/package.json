@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-   "start": "node ./Server/server.js",
-   "manual": "node ./Server/server.manual.js"
+    "start": "node ./Server/server.js",
+    "manual": "node ./Server/server.manual.js"
   },
   "author": "",
   "license": "ISC",
