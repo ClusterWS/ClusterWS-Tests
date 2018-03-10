@@ -1,6 +1,6 @@
 let PROTOCOL = 'ws'
 let PORT = 8080;
-let HOST = '127.0.0.2';
+let HOST = 'localhost';
 
 describe('Connect, Disconenct & Reconnect', function () {
     it('Should fire connect event on Connection', function (done) {
@@ -29,8 +29,10 @@ describe('Connect, Disconenct & Reconnect', function () {
         var socket = new ClusterWS({
             url: `${PROTOCOL}://${HOST}:${PORT}`,
             autoReconnect: true,
-            reconnectionIntervalMin: 10,
-            reconnectionIntervalMax: 20
+            autoReconnectOptions: {
+                minInterval: 10,
+                maxInterval: 20
+            }
         })
         var connected = false
         socket.on('connect', function () {
@@ -258,8 +260,10 @@ describe('Channel\'s Functionality', function () {
         var socket2 = new ClusterWS({
             url: `${PROTOCOL}://${HOST}:${PORT}`,
             autoReconnect: true,
-            reconnectionIntervalMin: 10,
-            reconnectionIntervalMax: 20
+            autoReconnectOptions: {
+                minInterval: 10,
+                maxInterval: 20
+            }
         })
         var channel
         var connected = false

@@ -7,7 +7,6 @@ new ClusterWS({
     worker: Worker,
     port: 8001,
     brokersPorts: [8002],
-    host: '127.0.0.2',
     horizontalScaleOptions: {
         masterOptions: {
             port: 8080,
