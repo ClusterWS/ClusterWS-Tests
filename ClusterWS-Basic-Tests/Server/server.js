@@ -7,7 +7,7 @@ let clusterws = new ClusterWS({
     worker: Worker,
     pingInterval: 80,
     workers: 2,
-    brokers: 2
+    brokers: 2,
     // Uncomment Next line to test binary
     // useBinary: true
 })

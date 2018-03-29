@@ -54,6 +54,7 @@ var EventEmitterSingle = function() {
             return parseInt(e, 10);
         }), r = e[0] < 6 || 6 === e[0] && e[1] < 4;
         if ("win32" === process.platform && r) throw new Error("µWebSockets requires Node.js 6.4.0 or greater on Windows.");
+        throw new Error("Could not run µWebSockets bindings");
     }
 }();
 
@@ -61,10 +62,13 @@ native.setNoop(noop);
 
 var WebSocket = function() {
     function e(e, r, n) {
-        void 0 === r && (r = null), void 0 === n && (n = "client"), this.onping = noop, 
-        this.onpong = noop, this.clientGroup = noop, this.external = noop, this.internalOnOpen = noop, 
-        this.internalOnError = noop, this.internalOnClose = noop, this.internalOnMessage = noop, 
-        this.websocketType = n, this.external = r, "client" === this.websocketType && (this.clientGroup = native.client.group.create(0, DEFAULT_PAYLOAD_LIMIT), 
+        void 0 === r && (r = null), void 0 === n && (n = "client");
+        var t = this;
+        this.isAlive = !0, this.onping = noop, this.onpong = noop, this.clientGroup = noop, 
+        this.external = noop, this.internalOnOpen = noop, this.internalOnError = noop, this.internalOnClose = noop, 
+        this.internalOnMessage = noop, this.websocketType = n, this.external = r, this.onpong = function() {
+            return t.isAlive = !0;
+        }, "client" === this.websocketType && (this.clientGroup = native.client.group.create(0, DEFAULT_PAYLOAD_LIMIT), 
         native.connect(this.clientGroup, e, this), native.client.group.onConnection(this.clientGroup, function(e) {
             var r = native.getUserData(e);
             r.external = e, r.internalOnOpen();
@@ -183,7 +187,12 @@ var WebSocket = function() {
             t.emit("listening"), n && n();
         }), t;
     }
-    return __extends(r, e), r.prototype.close = function(e) {
+    return __extends(r, e), r.prototype.keepAlive = function(e) {
+        var r = this;
+        setTimeout(function() {
+            native.server.group.forEach(r.serverGroup, r.sendPings), r.keepAlive(e);
+        }, e);
+    }, r.prototype.close = function(e) {
         this.upgradeListener && this.httpServer && (this.httpServer.removeListener("upgrade", this.upgradeListener), 
         this.passedHttpServer || this.httpServer.close()), this.serverGroup && (native.server.group.close(this.serverGroup), 
         this.serverGroup = null), "function" == typeof e && setTimeout(e, 2e4);
@@ -191,6 +200,8 @@ var WebSocket = function() {
         this.emit("connection", e);
     }, r.prototype.abortConnection = function(e, r, n) {
         e.end("HTTP/1.1 " + r + " " + n + "\r\n\r\n");
+    }, r.prototype.sendPings = function(e) {
+        e.isAlive ? (e.isAlive = !1, e.ping()) : e.terminate();
     }, r.prototype.sendMessage = function(e, r) {
         r.internalOnMessage(e);
     }, r.prototype.onDisconnection = function(e, r, n, t) {
@@ -280,11 +291,10 @@ var Socket = function() {
         }), this.socket.on("message", function(e) {
             if ("string" != typeof e && (e = Buffer.from(e).toString()), "#1" === e) return n.missedPing = 0;
             try {
-                e = JSON.parse(e);
+                e = JSON.parse(e), decode(n, e);
             } catch (e) {
                 return logError("PID: " + process.pid + "\n" + e + "\n");
             }
-            decode(n, e);
         }), this.socket.on("close", function(e, r) {
             clearInterval(t), n.events.emit("disconnect", e, r);
             for (var o = 0, s = (i = Object.keys(n.channels)).length; o < s; o++) n.worker.wss.channels.removeListener(i[o], n.onPublish);
@@ -298,6 +308,8 @@ var Socket = function() {
         void 0 === n && (n = "emit"), this.socket.send(this.worker.options.useBinary ? Buffer.from(encode(e, r, n)) : encode(e, r, n));
     }, e.prototype.disconnect = function(e, r) {
         this.socket.close(e, r);
+    }, e.prototype.terminate = function() {
+        this.socket.terminate();
     }, e;
 }(), EventEmitterMany = function() {
     function e() {
@@ -379,7 +391,7 @@ function BrokerClient(e, r, n, t, o) {
             return BrokerClient(e, r, n, ++t, !0);
         }, 500);
     }), s.on("message", function(e) {
-        return "#0" === e ? s.send("#1") : n.broadcastMessage("", e);
+        return n.broadcastMessage("", e);
     });
 }
 
@@ -444,32 +456,27 @@ function BrokerServer(e, r, n, t) {
     o.on("connection", function(e) {
         e.isAuth = !1, e.authTimeOut = setTimeout(function() {
             return e.close(4e3, "Not Authenticated");
-        }, 5e3), e.pingInterval = setInterval(function() {
-            return e.send("#0");
-        }, 2e4), e.on("message", function(o) {
-            if ("#1" !== o) {
-                if (o === r) {
-                    if (e.isAuth) return;
-                    return e.isAuth = !0, function e(r) {
-                        r.id = generateKey(16);
-                        if (s[r.id]) return e(r);
-                        s[r.id] = r;
-                    }(e), clearTimeout(e.authTimeOut);
-                }
-                e.isAuth && (c(e.id, o), "Scaler" !== t && n && function e(r) {
-                    if (i.brokersAmount <= 0) return;
-                    i.nextBroker >= i.brokersAmount - 1 ? i.nextBroker = 0 : i.nextBroker++;
-                    var n = i.brokers[i.brokersKeys[i.nextBroker]];
-                    if (1 !== n.readyState) return delete i.brokers[i.brokersKeys[i.nextBroker]], i.brokersKeys = Object.keys(i.brokers), 
-                    i.brokersAmount--, e(r);
-                    n.send(r);
-                }(o));
+        }, 5e3), e.on("message", function(o) {
+            if (o === r) {
+                if (e.isAuth) return;
+                return e.isAuth = !0, function e(r) {
+                    r.id = generateKey(16);
+                    if (s[r.id]) return e(r);
+                    s[r.id] = r;
+                }(e), clearTimeout(e.authTimeOut);
             }
+            e.isAuth && (c(e.id, o), "Scaler" !== t && n && function e(r) {
+                if (i.brokersAmount <= 0) return;
+                i.nextBroker >= i.brokersAmount - 1 ? i.nextBroker = 0 : i.nextBroker++;
+                var n = i.brokers[i.brokersKeys[i.nextBroker]];
+                if (1 !== n.readyState) return delete i.brokers[i.brokersKeys[i.nextBroker]], i.brokersKeys = Object.keys(i.brokers), 
+                i.brokersAmount--, e(r);
+                n.send(r);
+            }(o));
         }), e.on("close", function(r, n) {
-            clearInterval(e.pingInterval), clearTimeout(e.authTimeOut), e.isAuth && (s[e.id] = null), 
-            e = void 0;
+            clearTimeout(e.authTimeOut), e.isAuth && (s[e.id] = null), e = void 0;
         });
-    }), function() {
+    }), o.keepAlive(2e4), function() {
         if ("Scaler" === t || !n) return;
         n.masterOptions && u((n.masterOptions.tlsOptions ? "wss" : "ws") + "://127.0.0.1:" + n.masterOptions.port, n.key);
         for (var e = 0, r = n.brokersUrls.length; e < r; e++) u(n.brokersUrls[e], n.key);
