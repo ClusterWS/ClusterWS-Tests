@@ -3,6 +3,7 @@ const ClusterWS = require('./index')
 const path = require('path')
 const cluster = require('cluster')
 const fs = require('fs')
+var msgpack = require("msgpack-lite");
 
 if (cluster.isMaster) {
   // make force proccess change connection
@@ -19,8 +20,20 @@ let clusterws = new ClusterWS({
   tlsOptions: {
     key: fs.readFileSync('./Server/ssl/server-key.pem'),
     cert: fs.readFileSync('./Server/ssl/server-cert.pem')
+  },
+  encodeDecodeEngine: {
+    encode: (message) => {
+      console.log('encode -> ', message)
+      return msgpack.encode(message)
+    },
+    decode: (message) => {
+      console.log('decode -> ', message)
+      return msgpack.decode(message.data)
+    }
   }
 })
+
+
 
 function Worker() {
   const wss = this.wss
@@ -32,6 +45,7 @@ function Worker() {
   server.on('request', app)
 
   wss.on('connection', (socket) => {
+
     console.log('connected', process.pid)
     wss.publishToWorkers('Hello world')
     socket.on('echo', (message) => {

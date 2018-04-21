@@ -2,34 +2,45 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>ClusterWS Manual Tests</title>
+  <meta charset="UTF-8">
+  <title>ClusterWS Manual Tests</title>
 </head>
 
 <body>
-    <h1>Manual Tests</h1>
-    <button id="button">Send message</button>
+  <h1>Manual Tests</h1>
+  <button id="button">Send message</button>
 
 
-    <script src="js/ClusterWS.js"></script>
-    <script>
-        var socket = new ClusterWS({
-            url: 'wss://localhost:8080',
-            autoReconnect: true
-        })
-
-        socket.on('connect', function () {
-            console.log('Socket is connected')
-
-            socket.subscribe('Hello').watch((message) => {
-                console.log('Message :', message)
-            })
-        })
-
-        document.querySelector('#button').onclick = function () {
-            socket.getChannelByName('Hello').publish('hi')
+  <script src="https://rawgit.com/kawanet/msgpack-lite/master/dist/msgpack.min.js"></script>
+  <script src="js/ClusterWS.js"></script>
+  <script>
+    var socket = new ClusterWS({
+      url: 'wss://localhost:8080',
+      autoReconnect: true,
+      encodeDecodeEngine: {
+        decode: (msg) => {
+          console.log('decode-> ', msg)
+          return msgpack.decode(msg.data)
+        },
+        encode: (msg) => {
+          console.log('encode-> ', msg)
+          return msgpack.encode(msg)
         }
-    </script>
+      }
+    })
+
+    socket.on('connect', function () {
+      console.log('Socket is connected')
+
+      socket.subscribe('Hello').watch((message) => {
+        console.log('Message :', message)
+      })
+    })
+
+    document.querySelector('#button').onclick = function () {
+      socket.getChannelByName('Hello').publish({ hello: 'hi' })
+    }
+  </script>
 </body>
 
 </html>

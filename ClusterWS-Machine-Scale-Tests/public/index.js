@@ -1,157 +1,136 @@
-var ClusterWS = function() {
-    "use strict";
-    function t(t) {
-        return console.log(t);
+var ClusterWS = function () {
+  "use strict";
+  function t(t) {
+    return console.log(t);
+  }
+  var e = function () {
+    function e(t, e) {
+      this.name = e, this.socket = t, this.subscribe();
     }
-    var n = function() {
-        function n(t, n) {
-            this.socket = t, this.name = n, this.subscribe();
+    return e.prototype.watch = function (e) {
+      return "[object Function]" !== {}.toString.call(e) ? t("Listener must be a function") : (this.listener = e,
+        this);
+    }, e.prototype.publish = function (t) {
+      return this.socket.send(this.name, t, "publish"), this;
+    }, e.prototype.unsubscribe = function () {
+      this.socket.send("unsubscribe", this.name, "system"), this.socket.channels[this.name] = null;
+    }, e.prototype.onMessage = function (t) {
+      this.listener && this.listener.call(null, t);
+    }, e.prototype.subscribe = function () {
+      this.socket.send("subscribe", this.name, "system");
+    }, e;
+  }(), n = function () {
+    function e() {
+      this.events = {};
+    }
+    return e.prototype.on = function (e, n) {
+      if ("[object Function]" !== {}.toString.call(n)) return t("Listener must be a function");
+      this.events[e] = n;
+    }, e.prototype.emit = function (t) {
+      for (var e, n = [], o = 1; o < arguments.length; o++) n[o - 1] = arguments[o];
+      this.events[t] && (e = this.events)[t].apply(e, n);
+    }, e.prototype.removeAllEvents = function () {
+      this.events = {};
+    }, e;
+  }();
+  function o(t) {
+    for (var e = t.length, n = new Uint8Array(e), o = 0; o < e; o++) n[o] = t.charCodeAt(o);
+    return n.buffer;
+  }
+  function s(t, e, n) {
+    var o = {
+      emit: {
+        "#": ["e", t, e]
+      },
+      publish: {
+        "#": ["p", t, e]
+      },
+      system: {
+        subscribe: {
+          "#": ["s", "s", e]
+        },
+        unsubscribe: {
+          "#": ["s", "u", e]
         }
-        return n.prototype.watch = function(n) {
-            return "[object Function]" !== {}.toString.call(n) ? t("Listener must be a function") : (this.listener = n, 
-            this);
-        }, n.prototype.publish = function(t) {
-            return this.socket.send(this.name, t, "publish"), this;
-        }, n.prototype.unsubscribe = function() {
-            this.socket.send("unsubscribe", this.name, "system"), this.socket.channels[this.name] = null;
-        }, n.prototype.onMessage = function(t) {
-            this.listener && this.listener.call(null, t);
-        }, n.prototype.subscribe = function() {
-            this.socket.send("subscribe", this.name, "system");
-        }, n;
-    }(), e = function() {
-        function n() {
-            this.events = {};
-        }
-        return n.prototype.on = function(n, e) {
-            if ("[object Function]" !== {}.toString.call(e)) return t("Listener must be a function");
-            this.events[n] = e;
-        }, n.prototype.emit = function(t) {
-            for (var n = [], e = 1; e < arguments.length; e++) n[e - 1] = arguments[e];
-            this.events[t] && (o = this.events[t]).call.apply(o, [ null ].concat(n));
-            var o;
-        }, n.prototype.removeAllEvents = function() {
-            this.events = {};
-        }, n;
-    }(), o = function() {
-        function t(t) {
-            this.socket = t, this.inReconnectionState = !1, this.reconnectionAttempted = 0, 
-            this.autoReconnect = this.socket.options.autoReconnect;
-        }
-        return t.prototype.isConnected = function() {
-            clearTimeout(this.timer), clearInterval(this.interval), this.inReconnectionState = !1, 
-            this.reconnectionAttempted = 0;
-            for (var t in this.socket.channels) this.socket.channels[t] && this.socket.channels[t].subscribe();
-        }, t.prototype.reconnect = function() {
-            var t = this;
-            this.inReconnectionState || (this.inReconnectionState = !0, this.interval = setInterval(function() {
-                t.socket.getState() === t.socket.websocket.CLOSED && (t.reconnectionAttempted++, 
-                0 !== t.socket.options.reconnectionAttempts && t.reconnectionAttempted >= t.socket.options.reconnectionAttempts && (clearInterval(t.interval), 
-                t.autoReconnect = !1, t.inReconnectionState = !1), clearTimeout(t.timer), t.timer = setTimeout(function() {
-                    return t.socket.create();
-                }, Math.floor(Math.random() * (t.socket.options.reconnectionIntervalMax - t.socket.options.reconnectionIntervalMin + 1))));
-            }, this.socket.options.reconnectionIntervalMin));
-        }, t;
-    }();
-    function i(t, n, e) {
-        switch (e) {
-          case "ping":
-            return t;
-
-          case "emit":
-            return JSON.stringify({
-                "#": [ "e", t, n ]
-            });
-
-          case "publish":
-            return JSON.stringify({
-                "#": [ "p", t, n ]
-            });
-
-          case "system":
-            switch (t) {
-              case "subscribe":
-                return JSON.stringify({
-                    "#": [ "s", "s", n ]
-                });
-
-              case "unsubscribe":
-                return JSON.stringify({
-                    "#": [ "s", "u", n ]
-                });
-
-              case "configuration":
-                return JSON.stringify({
-                    "#": [ "s", "c", n ]
-                });
+      }
+    };
+    return JSON.stringify("system" === n ? o[n][t] : o[n]);
+  }
+  return function () {
+    function i(e) {
+      return this.events = new n(), this.isAlive = !0, this.channels = {}, this.useBinary = !1,
+        this.reconnectionAttempted = 0, e.url ? (this.options = {
+          url: e.url,
+          autoReconnect: e.autoReconnect || !1,
+          autoReconnectOptions: e.autoReconnectOptions ? {
+            attempts: e.autoReconnectOptions.attempts || 0,
+            minInterval: e.autoReconnectOptions.minInterval || 1e3,
+            maxInterval: e.autoReconnectOptions.maxInterval || 5e3
+          } : {
+              attempts: 0,
+              minInterval: 1e3,
+              maxInterval: 5e3
             }
-        }
+        }, this.options.autoReconnectOptions.minInterval > this.options.autoReconnectOptions.maxInterval ? t("minInterval option can not be more than maxInterval option") : void this.create()) : t("Url must be provided and it must be a string");
     }
-    return function() {
-        function s(n) {
-            return this.channels = {}, this.events = new e(), this.missedPing = 0, this.useBinary = !1, 
-            n.url ? (this.options = {
-                url: n.url,
-                autoReconnect: n.autoReconnect || !1,
-                reconnectionAttempts: n.reconnectionAttempts || 0,
-                reconnectionIntervalMin: n.reconnectionIntervalMin || 1e3,
-                reconnectionIntervalMax: n.reconnectionIntervalMax || 5e3
-            }, this.options.reconnectionIntervalMin > this.options.reconnectionIntervalMax ? t("reconnectionIntervalMin can not be more then reconnectionIntervalMax") : (this.reconnection = new o(this), 
-            void this.create())) : t("Url must be provided and it must be string");
-        }
-        return s.prototype.create = function() {
-            var n = this, e = window.MozWebSocket || window.WebSocket;
-            this.websocket = new e(this.options.url), this.websocket.binaryType = "arraybuffer", 
-            this.websocket.onopen = function() {
-                return n.reconnection.isConnected();
-            }, this.websocket.onerror = function(t) {
-                return n.events.emit("error", t.message);
-            }, this.websocket.onmessage = function(e) {
-                var o = "string" != typeof e.data ? String.fromCharCode.apply(null, new Uint8Array(e.data)) : e.data;
-                if ("#0" === o) return n.missedPing = 0, n.send("#1", null, "ping");
-                try {
-                    o = JSON.parse(o);
-                } catch (n) {
-                    return t(n);
+    return i.prototype.send = function (t, e, n) {
+      void 0 === n && (n = "emit"), this.websocket.send(this.useBinary ? o(s(t, e, n)) : s(t, e, n));
+    }, i.prototype.on = function (t, e) {
+      this.events.on(t, e);
+    }, i.prototype.disconnect = function (t, e) {
+      this.websocket.close(t || 1e3, e);
+    }, i.prototype.getState = function () {
+      return this.websocket.readyState;
+    }, i.prototype.subscribe = function (t) {
+      return this.channels[t] ? this.channels[t] : this.channels[t] = new e(this, t);
+    }, i.prototype.getChannelByName = function (t) {
+      return this.channels[t];
+    }, i.prototype.ping = function () {
+      var t = this;
+      clearTimeout(this.pingTimeout), this.pingTimeout = setTimeout(function () {
+        return t.disconnect(4001, "Did not get pings");
+      }, 1.2 * this.pingInterval);
+    }, i.prototype.create = function () {
+      var e = this, n = window.MozWebSocket || window.WebSocket;
+      this.websocket = new n(this.options.url), this.websocket.binaryType = "arraybuffer",
+        this.websocket.onopen = function () {
+          e.reconnectionAttempted = 0;
+          for (var t = 0, n = Object.keys(e.channels), o = n.length; t < o; t++) e.channels[n[t]] && e.channels[n[t]].subscribe();
+        }, this.websocket.onclose = function (t) {
+          if (clearTimeout(e.pingTimeout), e.events.emit("disconnect", t.code, t.reason),
+            e.options.autoReconnect && 1e3 !== t.code && (0 === e.options.autoReconnectOptions.attempts || e.reconnectionAttempted < e.options.autoReconnectOptions.attempts)) e.websocket.readyState === e.websocket.CLOSED ? (e.reconnectionAttempted++ ,
+              e.websocket = void 0, setTimeout(function () {
+                return e.create();
+              }, Math.floor(Math.random() * (e.options.autoReconnectOptions.maxInterval - e.options.autoReconnectOptions.minInterval + 1)))) : console.log("Some thing wrong with close event please contact developer"); else {
+            e.events.removeAllEvents();
+            for (var n = 0, o = Object.keys(e), s = o.length; n < s; n++) e[o[n]] = null;
+          }
+        }, this.websocket.onmessage = function (n) {
+          var s = "string" != typeof n.data ? String.fromCharCode.apply(null, new Uint8Array(n.data)) : n.data;
+          if ("9" === s) return e.websocket.send(o("A")), e.ping();
+          try {
+            s = JSON.parse(s), function (t, e) {
+              var n = {
+                e: function () {
+                  return t.events.emit(e["#"][1], e["#"][2]);
+                },
+                p: function () {
+                  return t.channels[e["#"][1]] && t.channels[e["#"][1]].onMessage(e["#"][2]);
+                },
+                s: {
+                  c: function () {
+                    t.useBinary = e["#"][2].binary, t.pingInterval = e["#"][2].ping, t.ping(), t.events.emit("connect");
+                  }
                 }
-                !function(t, n) {
-                    switch (n["#"][0]) {
-                      case "e":
-                        return t.events.emit(n["#"][1], n["#"][2]);
-
-                      case "p":
-                        t.channels[n["#"][1]] && t.channels[n["#"][1]].onMessage(n["#"][2]);
-
-                      case "s":
-                        switch (n["#"][1]) {
-                          case "c":
-                            t.pingInterval = setInterval(function() {
-                                return t.missedPing++ > 2 && t.disconnect(4001, "Did not get pings");
-                            }, n["#"][2].ping), t.useBinary = n["#"][2].binary, t.events.emit("connect");
-                        }
-                    }
-                }(n, o);
-            }, this.websocket.onclose = function(t) {
-                if (n.missedPing = 0, clearInterval(n.pingInterval), n.events.emit("disconnect", t.code, t.reason), 
-                n.options.autoReconnect && 1e3 !== t.code) return n.reconnection.reconnect();
-                n.events.removeAllEvents();
-                for (var e in n) n[e] && (n[e] = null);
-            };
-        }, s.prototype.on = function(t, n) {
-            this.events.on(t, n);
-        }, s.prototype.send = function(t, n, e) {
-            void 0 === e && (e = "emit"), this.websocket.send(this.useBinary ? function(t) {
-                for (var n = t.length, e = new Uint8Array(n), o = 0; o < n; o++) e[o] = t.charCodeAt(o);
-                return e.buffer;
-            }(i(t, n, e)) : i(t, n, e));
-        }, s.prototype.disconnect = function(t, n) {
-            this.websocket.close(t || 1e3, n);
-        }, s.prototype.getState = function() {
-            return this.websocket.readyState;
-        }, s.prototype.subscribe = function(t) {
-            return this.channels[t] ? this.channels[t] : this.channels[t] = new n(this, t);
-        }, s.prototype.getChannelByName = function(t) {
-            return this.channels[t];
-        }, s;
-    }();
+              };
+              "s" === e["#"][0] ? n[e["#"][0]][e["#"][1]] && n[e["#"][0]][e["#"][1]].call(null) : n[e["#"][0]] && n[e["#"][0]].call(null);
+            }(e, s);
+          } catch (e) {
+            return t(e);
+          }
+        }, this.websocket.onerror = function (t) {
+          return e.events.emit("error", t);
+        };
+    }, i;
+  }();
 }();
