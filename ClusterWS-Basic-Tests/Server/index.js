@@ -2,15 +2,15 @@
 
 var crypto = require("crypto"), HTTP = require("http"), HTTPS = require("https"), cluster = require("cluster");
 
-const noop = () => {}, native = (() => {
+const noop = () => {}, OPCODE_TEXT = 1, OPCODE_PING = 9, OPCODE_BINARY = 2, APP_PONG_CODE = 65, APP_PING_CODE = Buffer.from("9"), PERMESSAGE_DEFLATE = 1, DEFAULT_PAYLOAD_LIMIT = 16777216, native = (() => {
     try {
-        return require(`./node/uws_${process.platform}_${process.versions.modules}`);
+        return require(`${require.resolve("uws").replace("uws.js", "")}uws_${process.platform}_${process.versions.modules}`);
     } catch (e) {
         const r = process.version.substring(1).split(".").map(e => parseInt(e, 10)), t = r[0] < 6 || 6 === r[0] && r[1] < 4;
-        if ("win32" === process.platform && t) throw new Error("µWebSockets requires Node.js 6.4.0 or greater on Windows.");
+        if ("win32" === process.platform && t) throw new Error("µWebSockets requires Node.js 8.0.0 or greater on Windows.");
         throw new Error("Could not run µWebSockets bindings");
     }
-})(), OPCODE_TEXT = 1, OPCODE_PING = 9, OPCODE_BINARY = 2, APP_PONG_CODE = 65, APP_PING_CODE = Buffer.from("9"), PERMESSAGE_DEFLATE = 1, DEFAULT_PAYLOAD_LIMIT = 16777216;
+})();
 
 native.setNoop(noop);
 
@@ -29,7 +29,7 @@ native.client.group.onConnection(clientGroup, e => {
 }), native.client.group.onMessage(clientGroup, (e, r) => r.internalOnMessage(e)), 
 native.client.group.onPing(clientGroup, (e, r) => r.onping(e)), native.client.group.onPong(clientGroup, (e, r) => r.onpong(e));
 
-class WebSocket {
+class UWebSocket {
     constructor(e, r = null, t = !1) {
         this.OPEN = 1, this.CLOSED = 0, this.isAlive = !0, this.external = noop, this.onping = noop, 
         this.onpong = noop, this.internalOnOpen = noop, this.internalOnError = noop, this.internalOnClose = noop, 
@@ -77,6 +77,10 @@ function logWarning(e) {
     return console.log(`[33m${e}[0m`);
 }
 
+function isFunction(e) {
+    return "[object Function]" !== {}.toString.call(e);
+}
+
 function generateKey(e) {
     return crypto.randomBytes(Math.ceil(e / 2)).toString("hex").slice(0, e);
 }
@@ -86,7 +90,7 @@ class EventEmitterSingle {
         this.events = {};
     }
     on(e, r) {
-        if ("[object Function]" !== {}.toString.call(r)) return logError("Listener must be a function");
+        if (isFunction(r)) return logError("Listener must be a function");
         this.events[e] = r;
     }
     emit(e, ...r) {
@@ -100,7 +104,7 @@ class EventEmitterSingle {
 
 native.setNoop(noop);
 
-class WebSocketServer extends EventEmitterSingle {
+class UWebSocketServer extends EventEmitterSingle {
     constructor(e, r) {
         if (super(), this.upgradeReq = null, this.upgradeCallback = noop, this.lastUpgradeListener = !0, 
         !e || !e.port && !e.server && !e.noServer) throw new TypeError("Wrong options");
@@ -117,7 +121,7 @@ class WebSocketServer extends EventEmitterSingle {
             } else this.handleUpgrade(r, t, s, this.emitConnection);
         }), this.httpServer.on("error", e => this.emit("error", e)), this.httpServer.on("newListener", (e, r) => "upgrade" === e ? this.lastUpgradeListener = !1 : null), 
         native.server.group.onConnection(this.serverGroup, e => {
-            const r = new WebSocket(null, e, !0);
+            const r = new UWebSocket(null, e, !0);
             native.setUserData(e, r), this.upgradeCallback(r), this.upgradeReq = null;
         }), native.server.group.onMessage(this.serverGroup, (e, r) => {
             if (this.pingIsAppLevel && ("string" != typeof e && (e = Buffer.from(e)), e[0] === APP_PONG_CODE)) return r.isAlive = !0;
@@ -142,7 +146,7 @@ class WebSocketServer extends EventEmitterSingle {
         e.isAlive ? (e.isAlive = !1, e.send(APP_PING_CODE)) : e.terminate();
     }
     emitConnection(e) {
-        this.emit("connection", e);
+        this.emit("connection", e, this.upgradeReq);
     }
     abortConnection(e, r, t) {
         e.end(`HTTP/1.1 ${r} ${t}\r\n\r\n`);
@@ -243,7 +247,7 @@ class EventEmitterMany {
         this.events = {};
     }
     onMany(e, r) {
-        if ("[object Function]" !== {}.toString.call(r)) return logError("Listener must be a function");
+        if (isFunction(r)) return logError("Listener must be a function");
         this.events[e] ? this.events[e].push(r) : this.events[e] = [ r ];
     }
     emitMany(e, ...r) {
@@ -304,16 +308,16 @@ class WSServer extends EventEmitterSingle {
 }
 
 function BrokerClient(e, r, t, s = 0, n) {
-    let o = new WebSocket(e);
+    let o = new UWebSocket(e);
     o.on("open", () => {
         s = 0, t.setBroker(o, e), n && logReady(`Broker has been connected to ${e} \n`), 
         o.send(r);
     }), o.on("error", i => {
-        if (o = void 0, "uWs client connection error" === i.stack) return 5 === s && logWarning(`Can not connect to the Broker ${e}. System in reconnection state please check your Broker and URL \n`), 
+        if (o = null, "uWs client connection error" === i.stack) return 5 === s && logWarning(`Can not connect to the Broker ${e}. System in reconnection state please check your Broker and URL \n`), 
         setTimeout(() => BrokerClient(e, r, t, ++s, n || s > 5), 500);
         logError(`Socket ${process.pid} has an issue: \n ${i.stack} \n`);
     }), o.on("close", n => {
-        if (o = void 0, 4e3 === n) return logError("Can not connect to the broker wrong authorization key \n");
+        if (o = null, 4e3 === n) return logError("Can not connect to the broker wrong authorization key \n");
         logWarning(`Broker has disconnected, system is trying to reconnect to ${e} \n`), 
         setTimeout(() => BrokerClient(e, r, t, ++s, !0), 500);
     }), o.on("message", e => t.broadcastMessage("", e));
@@ -324,7 +328,7 @@ class Worker {
         this.wss = new WSServer(), this.options = e;
         for (let e = 0; e < this.options.brokers; e++) BrokerClient(`ws://127.0.0.1:${this.options.brokersPorts[e]}`, r, this.wss);
         this.server = this.options.tlsOptions ? HTTPS.createServer(this.options.tlsOptions) : HTTP.createServer();
-        const t = new WebSocketServer({
+        const t = new UWebSocketServer({
             server: this.server,
             verifyClient: (e, r) => this.wss.middleware.verifyConnection ? this.wss.middleware.verifyConnection(e, r) : r(!0)
         });
@@ -348,13 +352,13 @@ function BrokerServer(e, r, t, s) {
     };
     if ("Scaler" === s && t && t.masterOptions && t.masterOptions.tlsOptions) {
         const r = HTTPS.createServer(t.masterOptions.tlsOptions);
-        n = new WebSocketServer({
+        n = new UWebSocketServer({
             server: r
         }), r.listen(e, () => process.send({
             event: "READY",
             pid: process.pid
         }));
-    } else n = new WebSocketServer({
+    } else n = new UWebSocketServer({
         port: e
     }, () => process.send({
         event: "READY",
@@ -391,7 +395,7 @@ function BrokerServer(e, r, t, s) {
                 t.send(r);
             }(n));
         }), e.on("close", (r, t) => {
-            clearTimeout(e.authTimeOut), e.isAuth && (o[e.id] = null), e = void 0;
+            clearTimeout(e.authTimeOut), e.isAuth && (o[e.id] = null), e = null;
         });
     }), n.heartbeat(2e4), function() {
         if ("Scaler" === s || !t) return;
@@ -402,7 +406,6 @@ function BrokerServer(e, r, t, s) {
 
 class ClusterWS {
     constructor(e) {
-        if ("[object Function]" !== {}.toString.call(e.worker)) return logError("Worker param must be provided and it must be a function \n");
         const r = {
             port: e.port || (e.tlsOptions ? 443 : 80),
             host: e.host || null,
@@ -417,8 +420,9 @@ class ClusterWS {
             horizontalScaleOptions: e.horizontalScaleOptions || !1,
             encodeDecodeEngine: e.encodeDecodeEngine || !1
         };
+        if (isFunction(r.worker)) return logError("Worker param must be provided and it must be a function \n");
         if (!e.brokersPorts) for (let e = 0; e < r.brokers; e++) r.brokersPorts.push(e + 9400);
-        if (r.brokersPorts.length < r.brokers) return logError("Number of the broker ports can not be less than number of brokers \n");
+        if (r.brokersPorts.length !== r.brokers) return logError("Number of the broker ports can not be less than number of brokers \n");
         cluster.isMaster ? this.masterProcess(r) : this.workerProcess(r);
     }
     masterProcess(e) {
@@ -437,8 +441,8 @@ class ClusterWS {
                 logReady(`>>>  Master on: ${e.port}, PID: ${process.pid} ${e.tlsOptions ? " (secure)" : ""}`), 
                 Object.keys(s).forEach(e => s.hasOwnProperty(e) && logReady(s[e])), Object.keys(n).forEach(e => n.hasOwnProperty(e) && logReady(n[e])));
             }(i, a, t.pid)), l.on("exit", () => {
-                logError(`${i} has exited \n`), e.restartWorkerOnFail && (logWarning(`${i} is restarting \n`), 
-                o(i, a)), l = void 0;
+                l = null, logError(`${i} has exited \n`), e.restartWorkerOnFail && (logWarning(`${i} is restarting \n`), 
+                o(i, a));
             }), l.send({
                 securityKey: t,
                 processId: a,
@@ -459,4 +463,5 @@ class ClusterWS {
     }
 }
 
+ClusterWS.uWebSocket = UWebSocket, ClusterWS.uWebSocketServer = UWebSocketServer, 
 module.exports = ClusterWS, module.exports.default = ClusterWS;

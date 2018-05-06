@@ -12,6 +12,6 @@
   "dependencies": {
     "express": "^4.16.2",
     "msgpack-lite": "^0.1.26",
-    "uws": "^9.147.0"
+    "uws": "^9.148.0"
   }
 }
