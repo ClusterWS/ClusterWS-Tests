@@ -104,7 +104,7 @@ var ClusterWS = function() {
               e.options.autoReconnect && 1e3 !== t.code && (0 === e.options.autoReconnectOptions.attempts || e.reconnectionAttempted < e.options.autoReconnectOptions.attempts)) e.websocket.readyState === e.websocket.CLOSED ? (e.reconnectionAttempted++, 
               e.websocket = void 0, setTimeout(function() {
                   return e.create();
-              }, Math.floor(Math.random() * (e.options.autoReconnectOptions.maxInterval - e.options.autoReconnectOptions.minInterval + 1)))) : console.log("Some thing wrong with close event please contact developer"); else {
+              }, Math.floor(Math.random() * (e.options.autoReconnectOptions.maxInterval - e.options.autoReconnectOptions.minInterval + 1)))) : console.log("Some thing went wrong with close event please contact developer"); else {
                   e.events.removeAllEvents();
                   for (var n = 0, o = Object.keys(e), s = o.length; n < s; n++) e[o[n]] = null;
               }
@@ -127,7 +127,7 @@ var ClusterWS = function() {
                           }
                       };
                       "s" === e["#"][0] ? o[e["#"][0]][e["#"][1]] && o[e["#"][0]][e["#"][1]]() : o[e["#"][0]] && o[e["#"][0]]();
-                  }(e, JSON.parse(function(t) {
+                  }(e, JSON.parse("string" == typeof o ? o : function(t) {
                       for (var e = "", n = 65535, o = t.length, s = 0; s < o; s += n) s + n > o && (n = o - s), 
                       e += String.fromCharCode.apply(null, t.subarray(s, s + n));
                       return e;

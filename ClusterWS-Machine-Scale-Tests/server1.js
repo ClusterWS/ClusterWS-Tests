@@ -5,8 +5,9 @@ const fs = require('fs')
 
 new ClusterWS({
     worker: Worker,
+    brokers: 2,
     port: 8001,
-    brokersPorts: [8002],
+    brokersPorts: [8002, 8009],
     horizontalScaleOptions: {
         masterOptions: {
             port: 8080,

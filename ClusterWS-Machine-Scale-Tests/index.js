@@ -1,540 +1,549 @@
 "use strict";
 
-var crypto = require("crypto"), HTTP = require("http"), HTTPS = require("https"), cluster = require("cluster"), extendStatics = Object.setPrototypeOf || {
-    __proto__: []
-} instanceof Array && function(e, r) {
-    e.__proto__ = r;
-} || function(e, r) {
-    for (var n in r) r.hasOwnProperty(n) && (e[n] = r[n]);
-};
+var crypto = require("crypto"), HTTP = require("http"), HTTPS = require("https"), cluster = require("cluster");
 
-function __extends(e, r) {
-    function n() {
-        this.constructor = e;
-    }
-    extendStatics(e, r), e.prototype = null === r ? Object.create(r) : (n.prototype = r.prototype, 
-    new n());
-}
-
-var noop = function() {}, native = function() {
+const noop = () => {}, OPCODE_TEXT = 1, OPCODE_PING = 9, OPCODE_BINARY = 2, APP_PONG_CODE = 65, APP_PING_CODE = Buffer.from("9"), PERMESSAGE_DEFLATE = 1, DEFAULT_PAYLOAD_LIMIT = 16777216, native = (() => {
     try {
-        return require("./node/uws_" + process.platform + "_" + process.versions.modules);
-    } catch (n) {
-        var e = process.version.substring(1).split(".").map(function(e) {
-            return parseInt(e, 10);
-        }), r = e[0] < 6 || 6 === e[0] && e[1] < 4;
-        if ("win32" === process.platform && r) throw new Error("µWebSockets requires Node.js 6.4.0 or greater on Windows.");
+        return require(`${require.resolve("uws").replace("uws.js", "")}uws_${process.platform}_${process.versions.modules}`);
+    } catch (e) {
+        const r = process.version.substring(1).split(".").map(e => parseInt(e, 10)), s = r[0] < 6 || 6 === r[0] && r[1] < 4;
+        if ("win32" === process.platform && s) throw new Error("µWebSockets requires Node.js 8.0.0 or greater on Windows.");
         throw new Error("Could not run µWebSockets bindings");
     }
-}(), OPCODE_TEXT = 1, OPCODE_PING = 9, OPCODE_BINARY = 2, DEFAULT_PAYLOAD_LIMIT = 16777216;
+})();
 
 native.setNoop(noop);
 
-var clientGroup = native.client.group.create(0, DEFAULT_PAYLOAD_LIMIT);
+const clientGroup = native.client.group.create(0, DEFAULT_PAYLOAD_LIMIT);
 
-native.client.group.onConnection(clientGroup, function(e) {
-    var r = native.getUserData(e);
+native.client.group.onConnection(clientGroup, e => {
+    const r = native.getUserData(e);
     r.external = e, r.internalOnOpen();
-}), native.client.group.onMessage(clientGroup, function(e, r) {
-    return r.internalOnMessage(e);
-}), native.client.group.onPing(clientGroup, function(e, r) {
-    return r.onping(e);
-}), native.client.group.onPong(clientGroup, function(e, r) {
-    return r.onpong(e);
-}), native.client.group.onError(clientGroup, function(e) {
-    return process.nextTick(function() {
-        return e.internalOnError({
-            message: "uWs client connection error",
-            stack: "uWs client connection error"
-        });
-    });
-}), native.client.group.onDisconnection(clientGroup, function(e, r, n, t) {
-    t.external = null, process.nextTick(function() {
-        return t.internalOnClose(r, n);
+}), native.client.group.onDisconnection(clientGroup, (e, r, s, t) => {
+    t.external = null, process.nextTick(() => {
+        t.internalOnClose(r, s), t = null;
     }), native.clearUserData(e);
-});
+}), native.client.group.onError(clientGroup, e => {
+    process.nextTick(() => e.internalOnError({
+        message: "uWs client connection error",
+        stack: "uWs client connection error"
+    }));
+}), native.client.group.onMessage(clientGroup, (e, r) => r.internalOnMessage(e)), 
+native.client.group.onPing(clientGroup, (e, r) => r.onping(e)), native.client.group.onPong(clientGroup, (e, r) => r.onpong(e));
 
-var WebSocket = function() {
-    function e(e, r, n) {
-        void 0 === r && (r = null), void 0 === n && (n = !1);
-        var t = this;
-        this.OPEN = 1, this.CLOSED = 0, this.onping = noop, this.onpong = noop, this.isAlive = !0, 
-        this.external = noop, this.internalOnOpen = noop, this.internalOnError = noop, this.internalOnClose = noop, 
-        this.internalOnMessage = noop, this.external = r, this.executeOn = n ? "server" : "client", 
-        this.onpong = function() {
-            return t.isAlive = !0;
-        }, !n && native.connect(clientGroup, e, this);
+class UWebSocket {
+    constructor(e, r = null, s = !1) {
+        this.OPEN = 1, this.CLOSED = 0, this.isAlive = !0, this.external = noop, this.onping = noop, 
+        this.onpong = noop, this.internalOnOpen = noop, this.internalOnError = noop, this.internalOnClose = noop, 
+        this.internalOnMessage = noop, this.onpong = (() => this.isAlive = !0), this.external = r, 
+        this.executeOn = s ? "server" : "client", !s && native.connect(clientGroup, e, this);
     }
-    return Object.defineProperty(e.prototype, "readyState", {
-        get: function() {
-            return this.external ? this.OPEN : this.CLOSED;
-        },
-        enumerable: !0,
-        configurable: !0
-    }), e.prototype.on = function(e, r) {
-        var n = this;
+    get readyState() {
+        return this.external ? this.OPEN : this.CLOSED;
+    }
+    on(e, r) {
         return {
-            ping: function() {
-                return n.onping = r;
-            },
-            pong: function() {
-                return n.onpong = r;
-            },
-            open: function() {
-                return n.internalOnOpen = r;
-            },
-            error: function() {
-                return n.internalOnError = r;
-            },
-            close: function() {
-                return n.internalOnClose = r;
-            },
-            message: function() {
-                return n.internalOnMessage = r;
-            }
+            ping: () => this.onping = r,
+            pong: () => this.onpong = r,
+            open: () => this.internalOnOpen = r,
+            error: () => this.internalOnError = r,
+            close: () => this.internalOnClose = r,
+            message: () => this.internalOnMessage = r
         }[e](), this;
-    }, e.prototype.ping = function(e) {
+    }
+    ping(e) {
         this.external && native[this.executeOn].send(this.external, e, OPCODE_PING);
-    }, e.prototype.send = function(e, r) {
-        if (this.external) {
-            var n = r && r.binary || "string" != typeof e;
-            native[this.executeOn].send(this.external, e, n ? OPCODE_BINARY : OPCODE_TEXT, void 0);
-        }
-    }, e.prototype.terminate = function() {
+    }
+    send(e, r) {
+        if (!this.external) return;
+        const s = r && r.binary || "string" != typeof e;
+        native[this.executeOn].send(this.external, e, s ? OPCODE_BINARY : OPCODE_TEXT, void 0);
+    }
+    terminate() {
         this.external && (native[this.executeOn].terminate(this.external), this.external = null);
-    }, e.prototype.close = function(e, r) {
+    }
+    close(e, r) {
         this.external && (native[this.executeOn].close(this.external, e, r), this.external = null);
-    }, e;
-}();
+    }
+}
+
+function keysOf(e) {
+    return Object.keys(e);
+}
 
 function logError(e) {
-    return console.log("[31m" + e + "[0m");
+    return console.log(`[31m${e}[0m`);
 }
 
 function logReady(e) {
-    return console.log("[36m" + e + "[0m");
+    return console.log(`[36m${e}[0m`);
 }
 
 function logWarning(e) {
-    return console.log("[33m" + e + "[0m");
+    return console.log(`[33m${e}[0m`);
+}
+
+function isFunction(e) {
+    return "[object Function]" === {}.toString.call(e);
 }
 
 function generateKey(e) {
-    return crypto.randomBytes(Math.ceil(e / 2)).toString("hex").slice(0, e);
+    return crypto.randomBytes(Math.ceil(e / 4)).toString("hex").slice(0, e / 2) + Date.now() + crypto.randomBytes(Math.ceil(e / 4)).toString("hex").slice(0, e / 2);
 }
 
-var EventEmitterSingle = function() {
-    function e() {
+class EventEmitterSingle {
+    constructor() {
         this.events = {};
     }
-    return e.prototype.on = function(e, r) {
-        if ("[object Function]" !== {}.toString.call(r)) return logError("Listener must be a function");
+    on(e, r) {
+        if (!isFunction(r)) return logError("Listener must be a function");
         this.events[e] = r;
-    }, e.prototype.emit = function(e) {
-        for (var r = [], n = 1; n < arguments.length; n++) r[n - 1] = arguments[n];
-        var t = this.events[e];
-        t && t.apply(void 0, r);
-    }, e.prototype.removeEvents = function() {
+    }
+    emit(e, ...r) {
+        const s = this.events[e];
+        s && s(...r);
+    }
+    removeEvents() {
         this.events = {};
-    }, e;
-}(), PERMESSAGE_DEFLATE = 1, DEFAULT_PAYLOAD_LIMIT$1 = 16777216, APP_PING_CODE = Buffer.from("9"), APP_PONG_CODE = 65;
+    }
+}
 
 native.setNoop(noop);
 
-var WebSocketServer = function(e) {
-    function r(r, n) {
-        var t = e.call(this) || this;
-        if (t.upgradeReq = null, t.upgradeCallback = noop, t.lastUpgradeListener = !0, !r || !r.port && !r.server && !r.noServer) throw new TypeError("Wrong options");
-        t.noDelay = r.noDelay || !0, t.passedHttpServer = r.server;
-        var o = r.perMessageDeflate ? PERMESSAGE_DEFLATE : 0;
-        return t.serverGroup = native.server.group.create(o, r.maxPayload || DEFAULT_PAYLOAD_LIMIT$1), 
-        t.httpServer = r.server || HTTP.createServer(function(e, r) {
-            return r.end();
-        }), !r.path || r.path.length && "/" === r.path[0] || (r.path = "/" + r.path), t.httpServer.on("upgrade", function(e, n, o) {
-            if (r.path && r.path !== e.url.split("?")[0].split("#")[0]) t.lastUpgradeListener && t.abortConnection(n, 400, "URL not supported"); else if (r.verifyClient) {
-                var s = {
-                    origin: e.headers.origin,
-                    secure: !(!e.connection.authorized && !e.connection.encrypted),
-                    req: e
+class UWebSocketsServer extends EventEmitterSingle {
+    constructor(e, r) {
+        if (super(), this.upgradeReq = null, this.upgradeCallback = noop, this.lastUpgradeListener = !0, 
+        !e || !e.port && !e.server && !e.noServer) throw new TypeError("Wrong options");
+        this.noDelay = e.noDelay || !0, this.httpServer = e.server || HTTP.createServer((e, r) => r.end()), 
+        this.serverGroup = native.server.group.create(e.perMessageDeflate ? PERMESSAGE_DEFLATE : 0, e.maxPayload || DEFAULT_PAYLOAD_LIMIT), 
+        !e.path || e.path.length && "/" === e.path[0] || (e.path = `/${e.path}`), this.httpServer.on("upgrade", (r, s, t) => {
+            if (e.path && e.path !== r.url.split("?")[0].split("#")[0]) this.lastUpgradeListener && this.abortConnection(s, 400, "URL not supported"); else if (e.verifyClient) {
+                const n = {
+                    origin: r.headers.origin,
+                    secure: !(!r.connection.authorized && !r.connection.encrypted),
+                    req: r
                 };
-                r.verifyClient(s, function(r, s, i) {
-                    return r ? t.handleUpgrade(e, n, o, t.emitConnection) : t.abortConnection(n, s, i);
-                });
-            } else t.handleUpgrade(e, n, o, t.emitConnection);
-        }), t.httpServer.on("error", function(e) {
-            return t.emit("error", e);
-        }), t.httpServer.on("newListener", function(e, r) {
-            return "upgrade" === e ? t.lastUpgradeListener = !1 : null;
-        }), native.server.group.onConnection(t.serverGroup, function(e) {
-            var r = new WebSocket(null, e, !0);
-            native.setUserData(e, r), t.upgradeCallback(r), t.upgradeReq = null;
-        }), native.server.group.onMessage(t.serverGroup, function(e, r) {
-            if (t.pingIsAppLevel && ("string" != typeof e && (e = Buffer.from(e)), e[0] === APP_PONG_CODE)) return r.isAlive = !0;
-            r.internalOnMessage(e);
-        }), native.server.group.onDisconnection(t.serverGroup, function(e, r, n, t) {
-            t.external = null, process.nextTick(function() {
-                return t.internalOnClose(r, n);
+                e.verifyClient(n, (e, n, o) => e ? this.handleUpgrade(r, s, t, this.emitConnection) : this.abortConnection(s, n, o));
+            } else this.handleUpgrade(r, s, t, this.emitConnection);
+        }), this.httpServer.on("error", e => this.emit("error", e)), this.httpServer.on("newListener", (e, r) => "upgrade" === e ? this.lastUpgradeListener = !1 : null), 
+        native.server.group.onConnection(this.serverGroup, e => {
+            const r = new UWebSocket(null, e, !0);
+            native.setUserData(e, r), this.upgradeCallback(r), this.upgradeReq = null;
+        }), native.server.group.onMessage(this.serverGroup, (e, r) => {
+            let s;
+            if (this.pingIsAppLevel) if ("string" != typeof e) {
+                if ((s = Buffer.from(e))[0] === APP_PONG_CODE) return r.isAlive = !0;
+            } else s = e; else s = e;
+            r.internalOnMessage(s);
+        }), native.server.group.onDisconnection(this.serverGroup, (e, r, s, t) => {
+            t.external = null, process.nextTick(() => {
+                t.internalOnClose(r, s), t = null;
             }), native.clearUserData(e);
-        }), native.server.group.onPing(t.serverGroup, function(e, r) {
-            return r.onping(e);
-        }), native.server.group.onPong(t.serverGroup, function(e, r) {
-            return r.onpong(e);
-        }), r.port && t.httpServer.listen(r.port, r.host || null, function() {
-            t.emit("listening"), n && n();
-        }), t;
+        }), native.server.group.onPing(this.serverGroup, (e, r) => r.onping(e)), native.server.group.onPong(this.serverGroup, (e, r) => r.onpong(e)), 
+        e.port && this.httpServer.listen(e.port, e.host || null, () => {
+            this.emit("listening"), r && r();
+        });
     }
-    return __extends(r, e), r.prototype.keepAlive = function(e, r) {
-        var n = this;
-        void 0 === r && (r = !1), r && (this.pingIsAppLevel = !0), setTimeout(function() {
-            native.server.group.forEach(n.serverGroup, n.pingIsAppLevel ? n.sendPingsAppLevel : n.sendPings), 
-            n.keepAlive(e);
+    heartbeat(e, r = !1) {
+        r && (this.pingIsAppLevel = !0), setTimeout(() => {
+            native.server.group.forEach(this.serverGroup, this.pingIsAppLevel ? this.sendPingsAppLevel : this.sendPings), 
+            this.heartbeat(e);
         }, e);
-    }, r.prototype.sendPings = function(e) {
+    }
+    sendPings(e) {
         e.isAlive ? (e.isAlive = !1, e.ping()) : e.terminate();
-    }, r.prototype.sendPingsAppLevel = function(e) {
+    }
+    sendPingsAppLevel(e) {
         e.isAlive ? (e.isAlive = !1, e.send(APP_PING_CODE)) : e.terminate();
-    }, r.prototype.emitConnection = function(e) {
-        this.emit("connection", e);
-    }, r.prototype.abortConnection = function(e, r, n) {
-        e.end("HTTP/1.1 " + r + " " + n + "\r\n\r\n");
-    }, r.prototype.handleUpgrade = function(e, r, n, t) {
-        var o = this;
+    }
+    emitConnection(e) {
+        this.emit("connection", e, this.upgradeReq);
+    }
+    abortConnection(e, r, s) {
+        e.end(`HTTP/1.1 ${r} ${s}\r\n\r\n`);
+    }
+    handleUpgrade(e, r, s, t) {
         if (r._isNative) this.serverGroup && (this.upgradeReq = e, this.upgradeCallback = t || noop, 
         native.upgrade(this.serverGroup, r.external, null, e.headers["sec-websocket-extensions"], e.headers["sec-websocket-protocol"])); else {
-            var s = e.headers["sec-websocket-key"], i = r.ssl ? r._parent._handle : r._handle, a = r.ssl ? r.ssl._external : null;
-            if (i && s && 24 === s.length) {
+            const s = e.headers["sec-websocket-key"], n = r.ssl ? r._parent._handle : r._handle, o = r.ssl ? r.ssl._external : null;
+            if (n && s && 24 === s.length) {
                 r.setNoDelay(this.noDelay);
-                var c = native.transfer(-1 === i.fd ? i : i.fd, a);
-                r.on("close", function(r) {
-                    o.serverGroup && (o.upgradeReq = e, o.upgradeCallback = t || noop, native.upgrade(o.serverGroup, c, s, e.headers["sec-websocket-extensions"], e.headers["sec-websocket-protocol"]));
+                const i = native.transfer(-1 === n.fd ? n : n.fd, o);
+                r.on("close", r => {
+                    this.serverGroup && (this.upgradeReq = e, this.upgradeCallback = t || noop, native.upgrade(this.serverGroup, i, s, e.headers["sec-websocket-extensions"], e.headers["sec-websocket-protocol"]));
                 });
             }
             r.destroy();
         }
-    }, r;
-}(EventEmitterSingle);
-
-function encode(e, r, n) {
-    var t = {
-        emit: {
-            "#": [ "e", e, r ]
-        },
-        publish: {
-            "#": [ "p", e, r ]
-        },
-        system: {
-            subscribe: {
-                "#": [ "s", "s", r ]
-            },
-            unsubscribe: {
-                "#": [ "s", "u", r ]
-            },
-            configuration: {
-                "#": [ "s", "c", r ]
-            }
-        }
-    };
-    return JSON.stringify("system" === n ? t[n][e] : t[n]);
+    }
 }
 
-function decode(e, r) {
-    var n = {
-        e: function() {
-            return e.events.emit(r["#"][1], r["#"][2]);
-        },
-        p: function() {
-            return e.channels[r["#"][1]] && e.worker.wss.publish(r["#"][1], r["#"][2]);
-        },
-        s: {
-            s: function() {
-                var n = function() {
-                    e.channels[r["#"][2]] = 1, e.worker.wss.channels.onMany(r["#"][2], e.onPublishEvent);
-                };
-                e.worker.wss.middleware.onSubscribe ? e.worker.wss.middleware.onSubscribe(e, r["#"][2], function(e) {
-                    return e && n();
-                }) : n();
-            },
-            u: function() {
-                e.worker.wss.channels.removeListener(r["#"][2], e.onPublishEvent), e.channels[r["#"][2]] = null;
-            }
-        }
-    };
-    return "s" === r["#"][0] ? n[r["#"][0]][r["#"][1]] && n[r["#"][0]][r["#"][1]]() : n[r["#"][0]] && n[r["#"][0]]();
-}
-
-var Socket = function() {
-    function e(e, r) {
-        var n = this;
-        this.events = new EventEmitterSingle(), this.channels = {}, this.worker = e, this.socket = r, 
-        this.onPublishEvent = function(e, r) {
-            return n.send(e, r, "publish");
-        }, this.send("configuration", {
+class Socket {
+    constructor(e, r) {
+        this.worker = e, this.socket = r, this.id = generateKey(10), this.events = new EventEmitterSingle(), 
+        this.channels = {};
+        const s = {
             ping: this.worker.options.pingInterval,
             binary: this.worker.options.useBinary
-        }, "system"), this.socket.on("error", function(e) {
-            return n.events.emit("error", e);
-        }), this.socket.on("message", function(e) {
+        };
+        this.send("configuration", s, "system"), this.onPublishEvent = ((e, r) => this.send(e, r, "publish")), 
+        this.socket.on("message", e => {
             try {
-                e = JSON.parse(e), decode(n, e);
+                this.decode(JSON.parse(e));
             } catch (e) {
-                return logError("PID: " + process.pid + "\n" + e + "\n");
+                logError(`PID: ${process.pid}\n${e}\n`);
             }
-        }), this.socket.on("close", function(e, r) {
-            n.events.emit("disconnect", e, r);
-            for (var t = 0, o = (s = Object.keys(n.channels)).length; t < o; t++) n.worker.wss.channels.removeListener(s[t], n.onPublishEvent);
-            var s;
-            for (t = 0, o = (s = Object.keys(n)).length; t < o; t++) n[s[t]] = null;
+        }), this.socket.on("close", (e, r) => {
+            for (let e = 0, r = keysOf(this.channels), s = r.length; e < s; e++) this.worker.wss.channels.unsubscribe(r[e], this.id);
+            this.events.emit("disconnect", e, r), this.events.removeEvents();
+        }), this.socket.on("error", e => this.events.emit("error", e));
+    }
+    on(e, r) {
+        this.events.on(e, r);
+    }
+    send(e, r, s = "emit") {
+        r = this.worker.options.encodeDecodeEngine ? this.worker.options.encodeDecodeEngine.encode(r) : r, 
+        r = this.encode(e, r, s), this.socket.send(this.worker.options.useBinary ? Buffer.from(r) : r);
+    }
+    disconnect(e, r) {
+        this.socket.close(e, r);
+    }
+    terminate() {
+        this.socket.terminate();
+    }
+    encode(e, r, s) {
+        const t = {
+            emit: [ "e", e, r ],
+            publish: [ "p", e, r ],
+            system: {
+                configuration: [ "s", "c", r ]
+            }
+        };
+        return JSON.stringify({
+            "#": t[s][e] || t[s]
         });
     }
-    return e.prototype.on = function(e, r) {
-        this.events.on(e, r);
-    }, e.prototype.send = function(e, r, n) {
-        void 0 === n && (n = "emit"), this.socket.send(this.worker.options.useBinary ? Buffer.from(encode(e, r, n)) : encode(e, r, n));
-    }, e.prototype.disconnect = function(e, r) {
-        this.socket.close(e, r);
-    }, e.prototype.terminate = function() {
-        this.socket.terminate();
-    }, e;
-}(), EventEmitterMany = function() {
-    function e() {
+    decode(e) {
+        const r = this.worker.options.encodeDecodeEngine ? this.worker.options.encodeDecodeEngine.decode(e["#"][2]) : e["#"][2], s = {
+            e: () => this.events.emit(e["#"][1], r),
+            p: () => this.channels[e["#"][1]] && this.worker.wss.publish(e["#"][1], r),
+            s: {
+                s: () => {
+                    if (this.channels[r]) return;
+                    const e = () => {
+                        this.channels[r] = 1, this.worker.wss.channels.subscibe(r, this.onPublishEvent, this.id);
+                    };
+                    this.worker.wss.middleware.onSubscribe ? this.worker.wss.middleware.onSubscribe(this, r, r => r && e()) : e();
+                },
+                u: () => {
+                    this.channels[r] && (this.worker.wss.channels.unsubscribe(r, this.id), this.channels[r] = null);
+                }
+            }
+        };
+        s[e["#"][0]][e["#"][1]] ? s[e["#"][0]][e["#"][1]]() : s[e["#"][0]] && s[e["#"][0]]();
+    }
+}
+
+class EventEmitterMany {
+    constructor() {
         this.events = {};
     }
-    return e.prototype.onMany = function(e, r) {
-        if ("[object Function]" !== {}.toString.call(r)) return logError("Listener must be a function");
-        this.events[e] ? this.events[e].push(r) : this.events[e] = [ r ];
-    }, e.prototype.emitMany = function(e) {
-        for (var r = [], n = 1; n < arguments.length; n++) r[n - 1] = arguments[n];
-        var t = this.events[e];
-        if (t) for (var o = 0, s = t.length; o < s; o++) t[o].apply(t, [ e ].concat(r));
-    }, e.prototype.removeListener = function(e, r) {
-        var n = this.events[e];
-        if (n) {
-            for (var t = 0, o = n.length; t < o; t++) if (n[t] === r) return n.splice(t, 1);
-            0 === n.length && (this.events[e] = null);
+    subscibe(e, r, s) {
+        if (!isFunction(r)) return logError("Listener must be a function");
+        this.events[e] ? this.events[e].push({
+            token: s,
+            listener: r
+        }) : (this.events[e] = [ {
+            token: s,
+            listener: r
+        } ], this.changeChannelStatusInBroker(e));
+    }
+    publish(e, ...r) {
+        const s = this.events[e];
+        if (s) for (let t = 0, n = s.length; t < n; t++) s[t].listener(e, ...r);
+    }
+    unsubscribe(e, r) {
+        const s = this.events[e];
+        if (s) {
+            for (let e = 0, t = s.length; e < t; e++) if (s[e].token === r) {
+                s.splice(e, 1);
+                break;
+            }
+            0 === s.length && (this.events[e] = null, this.changeChannelStatusInBroker(e));
         }
-    }, e.prototype.exist = function(e) {
-        return this.events[e] && this.events[e].length > 0;
-    }, e;
-}(), WSServer = function(e) {
-    function r() {
-        var r = null !== e && e.apply(this, arguments) || this;
-        return r.channels = new EventEmitterMany(), r.middleware = {}, r.internalBrokers = {
+    }
+    exist(e) {
+        return this.events[e];
+    }
+    changeChannelStatusInBroker(e) {}
+}
+
+class WSServer extends EventEmitterSingle {
+    constructor() {
+        super(), this.channels = new EventEmitterMany(), this.middleware = {}, this.internalBrokers = {
             brokers: {},
             nextBroker: -1,
             brokersKeys: [],
             brokersAmount: 0
-        }, r;
-    }
-    return __extends(r, e), r.prototype.setMiddleware = function(e, r) {
-        this.middleware[e] = r;
-    }, r.prototype.publishToWorkers = function(e) {
-        this.publish("#sendToWorkers", e);
-    }, r.prototype.publish = function(e, r, n) {
-        var t = this;
-        if (void 0 === n && (n = 0), n > 2 * this.internalBrokers.brokersAmount + 10) return logWarning("Does not have access to any broker");
-        if (this.internalBrokers.brokersAmount <= 0) return setTimeout(function() {
-            return t.publish(e, r, ++n);
-        }, 10);
-        this.internalBrokers.nextBroker >= this.internalBrokers.brokersAmount - 1 ? this.internalBrokers.nextBroker = 0 : this.internalBrokers.nextBroker++;
-        var o = this.internalBrokers.brokers[this.internalBrokers.brokersKeys[this.internalBrokers.nextBroker]];
-        return 1 !== o.readyState ? (delete this.internalBrokers.brokers[this.internalBrokers.brokersKeys[this.internalBrokers.nextBroker]], 
-        this.internalBrokers.brokersKeys = Object.keys(this.internalBrokers.brokers), this.internalBrokers.brokersAmount--, 
-        this.publish(e, r, ++n)) : (o.send(Buffer.from(e + "%" + JSON.stringify({
-            message: r
-        }))), "#sendToWorkers" === e ? this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(r) : (this.middleware.onPublish && this.middleware.onPublish(e, r), 
-        void this.channels.emitMany(e, r)));
-    }, r.prototype.broadcastMessage = function(e, r) {
-        var n = (r = Buffer.from(r)).indexOf(37), t = r.slice(0, n).toString();
-        if ("#sendToWorkers" === t) return this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(JSON.parse(r.slice(n + 1)).message);
-        if (this.channels.exist(t)) {
-            var o = JSON.parse(r.slice(n + 1)).message;
-            this.middleware.onPublish && this.middleware.onPublish(t, o), this.channels.emitMany(t, o);
-        }
-    }, r.prototype.setBroker = function(e, r) {
-        this.internalBrokers.brokers[r] = e, this.internalBrokers.brokersKeys = Object.keys(this.internalBrokers.brokers), 
-        this.internalBrokers.brokersAmount = this.internalBrokers.brokersKeys.length;
-    }, r;
-}(EventEmitterSingle);
-
-function BrokerClient(e, r, n, t, o) {
-    void 0 === t && (t = 0);
-    var s = new WebSocket(e);
-    s.on("open", function() {
-        t = 0, n.setBroker(s, e), o && logReady("Broker has been connected to " + e + " \n"), 
-        s.send(r);
-    }), s.on("error", function(i) {
-        if (s = void 0, "uWs client connection error" === i.stack) return 5 === t && logWarning("Can not connect to the Broker " + e + ". System in reconnection state please check your Broker and URL \n"), 
-        setTimeout(function() {
-            return BrokerClient(e, r, n, ++t, o || t > 5);
-        }, 500);
-        logError("Socket " + process.pid + " has an issue: \n " + i.stack + " \n");
-    }), s.on("close", function(o) {
-        if (s = void 0, 4e3 === o) return logError("Can not connect to the broker wrong authorization key \n");
-        logWarning("Broker has disconnected, system is trying to reconnect to " + e + " \n"), 
-        setTimeout(function() {
-            return BrokerClient(e, r, n, ++t, !0);
-        }, 500);
-    }), s.on("message", function(e) {
-        return n.broadcastMessage("", e);
-    });
-}
-
-var Worker = function() {
-    return function(e, r) {
-        var n = this;
-        this.wss = new WSServer(), this.options = e;
-        for (var t = 0; t < this.options.brokers; t++) BrokerClient("ws://127.0.0.1:" + this.options.brokersPorts[t], r, this.wss);
-        this.server = this.options.tlsOptions ? HTTPS.createServer(this.options.tlsOptions) : HTTP.createServer();
-        var o = new WebSocketServer({
-            server: this.server,
-            verifyClient: function(e, r) {
-                return n.wss.middleware.verifyConnection ? n.wss.middleware.verifyConnection(e, r) : r(!0);
+        }, this.channels.changeChannelStatusInBroker = (e => {
+            for (let r = 0; r < this.internalBrokers.brokersAmount; r++) {
+                const s = this.internalBrokers.brokers[this.internalBrokers.brokersKeys[r]];
+                1 === s.readyState && s.send(e);
             }
         });
-        o.on("connection", function(e) {
-            return n.wss.emit("connection", new Socket(n, e));
-        }), o.keepAlive(this.options.pingInterval, !0), this.server.listen(this.options.port, this.options.host, function() {
-            n.options.worker.call(n), process.send({
+    }
+    setMiddleware(e, r) {
+        this.middleware[e] = r;
+    }
+    setWatcher(e, r) {
+        this.channels.subscibe(e, (e, ...s) => r(...s), "worker");
+    }
+    removeWatcher(e) {
+        this.channels.unsubscribe(e, "worker");
+    }
+    publishToWorkers(e) {
+        this.publish("#sendToWorkers", e);
+    }
+    publish(e, r, s = 0) {
+        if (s > 2 * this.internalBrokers.brokersAmount + 1) return logWarning("Does not have access to any broker");
+        if (this.internalBrokers.brokersAmount <= 0) return setTimeout(() => this.publish(e, r, ++s), 10);
+        this.internalBrokers.nextBroker >= this.internalBrokers.brokersAmount - 1 ? this.internalBrokers.nextBroker = 0 : this.internalBrokers.nextBroker++;
+        const t = this.internalBrokers.brokers[this.internalBrokers.brokersKeys[this.internalBrokers.nextBroker]];
+        return 1 !== t.readyState ? (this.clearBroker(this.internalBrokers.brokersKeys[this.internalBrokers.nextBroker]), 
+        this.publish(e, r, ++s)) : (t.send(Buffer.from(`${e}%${JSON.stringify({
+            message: r
+        })}`)), "#sendToWorkers" === e ? this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(r) : (this.channels.publish(e, r), 
+        void (this.middleware.onPublish && this.middleware.onPublish(e, r))));
+    }
+    broadcastMessage(e, r) {
+        const s = Buffer.from(r), t = s.indexOf(37), n = s.slice(0, t).toString(), o = JSON.parse(s.slice(t + 1)).message;
+        if ("#sendToWorkers" === n) return this.middleware.onMessageFromWorker && this.middleware.onMessageFromWorker(o);
+        this.middleware.onPublish && this.middleware.onPublish(n, o), this.channels.publish(n, o);
+    }
+    clearBroker(e) {
+        this.internalBrokers.brokers[e] && (delete this.internalBrokers.brokers[e], this.internalBrokers.brokersKeys = keysOf(this.internalBrokers.brokers), 
+        this.internalBrokers.brokersAmount--);
+    }
+    setBroker(e, r) {
+        this.internalBrokers.brokers[r] = e, this.internalBrokers.brokersKeys = keysOf(this.internalBrokers.brokers), 
+        this.internalBrokers.brokersAmount = this.internalBrokers.brokersKeys.length;
+        const s = keysOf(this.channels.events);
+        s.length && e.send(JSON.stringify(s));
+    }
+}
+
+function BrokerClient(e, r, s = 0, t) {
+    let n = new UWebSocket(e);
+    n.on("open", () => {
+        s = 0, r.setBroker(n, e), t && logReady(`Broker has been connected to ${e} \n`);
+    }), n.on("close", (t, o) => {
+        if (n = null, 1e3 === t) return logWarning(`Broker has disconnected from ${e} with code 1000 \n`);
+        r.clearBroker(e), logWarning(`Broker has disconnected, system is trying to reconnect to ${e} \n`), 
+        setTimeout(() => BrokerClient(e, r, ++s, !0), Math.floor(1e3 * Math.random()) + 500);
+    }), n.on("error", o => {
+        n = null, r.clearBroker(e), 5 === s && logWarning(`Can not connect to the Broker ${e}. System in reconnection please check your Broker and Token\n`), 
+        setTimeout(() => BrokerClient(e, r, ++s, t || s > 5), Math.floor(1e3 * Math.random()) + 500);
+    }), n.on("message", e => r.broadcastMessage(null, e));
+}
+
+class Worker {
+    constructor(e, r) {
+        this.options = e, this.wss = new WSServer();
+        for (let e = 0; e < this.options.brokers; e++) BrokerClient(`ws://127.0.0.1:${this.options.brokersPorts[e]}/?token=${r}`, this.wss);
+        this.server = this.options.tlsOptions ? HTTPS.createServer(this.options.tlsOptions) : HTTP.createServer();
+        const s = new UWebSocketsServer({
+            server: this.server,
+            verifyClient: (e, r) => this.wss.middleware.verifyConnection ? this.wss.middleware.verifyConnection(e, r) : r(!0)
+        });
+        s.on("connection", (e, r) => this.wss.emit("connection", new Socket(this, e), r)), 
+        s.heartbeat(this.options.pingInterval, !0), this.server.listen(this.options.port, this.options.host, () => {
+            this.options.worker.call(this), process.send({
                 event: "READY",
                 pid: process.pid
             });
         });
-    };
-}();
+    }
+}
 
-function BrokerServer(e, r, n, t) {
-    var o, s = {}, i = {
+function GlobalBrokerServer(e) {
+    const r = {
+        sockets: {},
+        length: 0,
+        keys: []
+    };
+    let s;
+    const t = {
+        port: e.masterOptions.port,
+        verifyClient: (r, s) => s(r.req.url === `/?token=${e.key || ""}`)
+    };
+    if (e.masterOptions.tlsOptions) {
+        const r = HTTPS.createServer(e.masterOptions.tlsOptions);
+        t.port = null, t.server = r, s = new UWebSocketsServer(t), r.listen(e.masterOptions.port, () => process.send({
+            event: "READY",
+            pid: process.pid
+        }));
+    } else s = new UWebSocketsServer(t, () => process.send({
+        event: "READY",
+        pid: process.pid
+    }));
+    function n(e, r) {
+        e.next >= e.length && (e.next = 0), e.wss[e.keys[e.next]].send(r), e.next++;
+    }
+    s.on("connection", e => {
+        e.on("message", s => {
+            e.uid || "string" != typeof s ? e.uid && function(e, s) {
+                for (let t = 0; t < r.length; t++) {
+                    const o = r.keys[t];
+                    o !== e && n(r.sockets[o], s);
+                }
+            }(e.serverid, s) : (e.uid = generateKey(10), e.serverid = s, r.sockets[s] || (r.sockets[s] = {
+                wss: {},
+                next: 0,
+                length: 0,
+                keys: []
+            }, r.length++, r.keys = keysOf(r.sockets)), r.sockets[s].wss[e.uid] = e, r.sockets[s].keys = keysOf(r.sockets[s].wss), 
+            r.sockets[s].length++);
+        }), e.on("close", (s, t) => {
+            e.uid && (delete r.sockets[e.serverid].wss[e.uid], r.sockets[e.serverid].keys = keysOf(r.sockets[e.serverid].wss), 
+            r.sockets[e.serverid].length--, r.sockets[e.serverid].length || (delete r.sockets[e.serverid], 
+            r.keys = keysOf(r.sockets), r.length--)), e = null;
+        });
+    }), s.heartbeat(2e4);
+}
+
+function InternalBrokerServer(e, r, s) {
+    const t = {
+        sockets: {},
+        length: 0,
+        keys: []
+    }, n = {
         brokers: {},
         nextBroker: -1,
         brokersKeys: [],
         brokersAmount: 0
-    };
-    if ("Scaler" === t && n && n.masterOptions && n.masterOptions.tlsOptions) {
-        var a = HTTPS.createServer(n.masterOptions.tlsOptions);
-        o = new WebSocketServer({
-            server: a
-        }), a.listen(e, function() {
-            return process.send({
-                event: "READY",
-                pid: process.pid
-            });
+    }, o = new UWebSocketsServer({
+        port: e,
+        verifyClient: (e, s) => s(e.req.url === `/?token=${r}`)
+    }, () => process.send({
+        event: "READY",
+        pid: process.pid
+    }));
+    if (o.on("connection", e => {
+        e.uid = generateKey(10), e.channels = {
+            "#sendToWorkers": !0
+        }, t.sockets[e.uid] = e, t.length++, t.keys = keysOf(t.sockets), e.on("message", r => {
+            if ("string" == typeof r) if ("[" !== r[0]) e.channels[r] = e.channels[r] ? null : 1; else {
+                const s = JSON.parse(r);
+                for (let r = 0, t = s.length; r < t; r++) e.channels[s[r]] = !0;
+            } else a(e.uid, r), s && function e(r) {
+                if (n.brokersAmount <= 0) return;
+                n.nextBroker >= n.brokersAmount - 1 ? n.nextBroker = 0 : n.nextBroker++;
+                const s = n.brokers[n.brokersKeys[n.nextBroker]];
+                if (1 !== s.readyState) return i(n.brokersKeys[n.nextBroker]), e(r);
+                s.send(r);
+            }(r);
+        }), e.on("close", (r, s) => {
+            delete t.sockets[e.uid], t.length--, t.keys = keysOf(t.sockets), e = null;
         });
-    } else o = new WebSocketServer({
-        port: e
-    }, function() {
-        return process.send({
-            event: "READY",
-            pid: process.pid
-        });
-    });
-    function c(e, r) {
-        for (var n = 0, t = Object.keys(s), o = t.length; n < o; n++) t[n] !== e && s[t[n]] && s[t[n]].send(r);
+    }), o.heartbeat(2e4), s) {
+        s.masterOptions && l(`${s.masterOptions.tlsOptions ? "wss" : "ws"}://127.0.0.1:${s.masterOptions.port}/?token=${s.key}`);
+        for (let e = 0, r = s.brokersUrls.length; e < r; e++) l(`${s.brokersUrls[e]}/?token=${s.key}`);
     }
-    function u(e, r) {
-        void 0 === r && (r = ""), BrokerClient(e, r, {
-            broadcastMessage: c,
-            setBroker: function(e, r) {
-                i.brokers[r] = e, i.brokersKeys = Object.keys(i.brokers), i.brokersAmount = i.brokersKeys.length;
+    function i(e) {
+        n.brokers[e] && (delete n.brokers[e], n.brokersKeys = keysOf(n.brokers), n.brokersAmount--);
+    }
+    function l(e) {
+        BrokerClient(e, {
+            clearBroker: i,
+            broadcastMessage: a,
+            setBroker: (e, r) => {
+                n.brokers[r] = e, n.brokersKeys = keysOf(n.brokers), n.brokersAmount = n.brokersKeys.length, 
+                e.send(s.serverId);
             }
         });
     }
-    o.on("connection", function(e) {
-        e.isAuth = !1, e.authTimeOut = setTimeout(function() {
-            return e.close(4e3, "Not Authenticated");
-        }, 5e3), e.on("message", function(o) {
-            if (o === r) {
-                if (e.isAuth) return;
-                return e.isAuth = !0, function e(r) {
-                    r.id = generateKey(16);
-                    if (s[r.id]) return e(r);
-                    s[r.id] = r;
-                }(e), clearTimeout(e.authTimeOut);
+    function a(e, r) {
+        const s = Buffer.from(r), n = s.slice(0, s.indexOf(37)).toString();
+        for (let s = 0; s < t.length; s++) {
+            const o = t.keys[s];
+            if (o !== e) {
+                const e = t.sockets[o];
+                e.channels[n] && e.send(r);
             }
-            e.isAuth && (c(e.id, o), "Scaler" !== t && n && function e(r) {
-                if (i.brokersAmount <= 0) return;
-                i.nextBroker >= i.brokersAmount - 1 ? i.nextBroker = 0 : i.nextBroker++;
-                var n = i.brokers[i.brokersKeys[i.nextBroker]];
-                if (1 !== n.readyState) return delete i.brokers[i.brokersKeys[i.nextBroker]], i.brokersKeys = Object.keys(i.brokers), 
-                i.brokersAmount--, e(r);
-                n.send(r);
-            }(o));
-        }), e.on("close", function(r, n) {
-            clearTimeout(e.authTimeOut), e.isAuth && (s[e.id] = null), e = void 0;
-        });
-    }), o.keepAlive(2e4), function() {
-        if ("Scaler" === t || !n) return;
-        n.masterOptions && u((n.masterOptions.tlsOptions ? "wss" : "ws") + "://127.0.0.1:" + n.masterOptions.port, n.key);
-        for (var e = 0, r = n.brokersUrls.length; e < r; e++) u(n.brokersUrls[e], n.key);
-    }();
+        }
+    }
 }
 
-var ClusterWS = function() {
-    function e(e) {
-        if ("[object Function]" !== {}.toString.call(e.worker)) return logError("Worker param must be provided and it must be a function \n");
-        var r = {
+function masterProcess(e) {
+    let r = !1;
+    const s = {}, t = {}, n = generateKey(10), o = generateKey(10);
+    if (e.horizontalScaleOptions && e.horizontalScaleOptions.masterOptions) i("Scaler", -1); else for (let r = 0; r < e.brokers; r++) i("Broker", r);
+    function i(l, a) {
+        let c = cluster.fork();
+        c.on("message", n => {
+            if (r) return logReady(`${l} PID ${n.pid} has been restarted`);
+            ({
+                Scaler: () => {
+                    for (let r = 0; r < e.brokers; r++) i("Broker", r);
+                },
+                Worker: () => {
+                    t[a] = `\tWorker: ${a}, PID ${n.pid}`;
+                },
+                Broker: () => {
+                    if (s[a] = `>>>  Broker on: ${e.brokersPorts[a]}, PID ${n.pid}`, keysOf(s).length === e.brokers) for (let r = 0; r < e.workers; r++) i("Worker", r);
+                }
+            })[l](), keysOf(s).length === e.brokers && keysOf(t).length === e.workers && (r = !0, 
+            logReady(`>>>  Master on: ${e.port}, PID: ${process.pid} ${e.tlsOptions ? " (secure)" : ""}`), 
+            keysOf(s).forEach(e => logReady(s[e])), keysOf(t).forEach(e => logReady(t[e])));
+        }), c.on("exit", () => {
+            c = null, logError(`${l} has exited \n`), e.restartWorkerOnFail && (logWarning(`${l} is restarting \n`), 
+            i(l, a));
+        }), c.send({
+            processId: a,
+            processName: l,
+            securityKey: n,
+            uniqueServerId: o
+        });
+    }
+}
+
+function workerProcess(e) {
+    process.on("message", r => {
+        const s = {
+            Worker: () => new Worker(e, r.securityKey),
+            Scaler: () => e.horizontalScaleOptions && GlobalBrokerServer(e.horizontalScaleOptions),
+            Broker: () => {
+                e.horizontalScaleOptions && (e.horizontalScaleOptions.serverId = r.uniqueServerId), 
+                InternalBrokerServer(e.brokersPorts[r.processId], r.securityKey, e.horizontalScaleOptions);
+            }
+        };
+        s[r.processName] && s[r.processName]();
+    }), process.on("uncaughtException", e => {
+        logError(`PID: ${process.pid}\n ${e.stack}\n`), process.exit();
+    });
+}
+
+class ClusterWS {
+    constructor(e) {
+        const r = {
             port: e.port || (e.tlsOptions ? 443 : 80),
             host: e.host || null,
             worker: e.worker,
             workers: e.workers || 1,
             brokers: e.brokers || 1,
             useBinary: e.useBinary || !1,
-            brokersPorts: e.brokersPorts || [],
             tlsOptions: e.tlsOptions || !1,
             pingInterval: e.pingInterval || 2e4,
+            brokersPorts: e.brokersPorts || [],
+            encodeDecodeEngine: e.encodeDecodeEngine || !1,
             restartWorkerOnFail: e.restartWorkerOnFail || !1,
             horizontalScaleOptions: e.horizontalScaleOptions || !1
         };
-        if (!e.brokersPorts) for (var n = 0; n < r.brokers; n++) r.brokersPorts.push(n + 9400);
-        if (r.brokersPorts.length < r.brokers) return logError("Number of the broker ports can not be less than number of brokers \n");
-        cluster.isMaster ? this.masterProcess(r) : this.workerProcess(r);
+        if (!r.brokersPorts.length) for (let e = 0; e < r.brokers; e++) r.brokersPorts.push(e + 9400);
+        if (r.brokers !== r.brokersPorts.length || !isFunction(r.worker)) return logError(isFunction(r.worker) ? "Number of broker ports should be the same as number of brokers\n" : "Worker param must be provided and it must be a function \n");
+        cluster.isMaster ? masterProcess(r) : workerProcess(r);
     }
-    return e.prototype.masterProcess = function(e) {
-        var r = !1, n = generateKey(16), t = {}, o = {};
-        if (e.horizontalScaleOptions && e.horizontalScaleOptions.masterOptions) i("Scaler", -1); else for (var s = 0; s < e.brokers; s++) i("Broker", s);
-        function i(s, a) {
-            var c = cluster.fork();
-            c.on("message", function(n) {
-                return "READY" === n.event && function(n, s, a) {
-                    if (r) return logReady(n + " PID " + a + " has been restarted");
-                    "Worker" === n && (o[s] = "\tWorker: " + s + ", PID " + a);
-                    if ("Scaler" === n) for (var c = 0; c < e.brokers; c++) i("Broker", c);
-                    if ("Broker" === n && (t[s] = ">>>  Broker on: " + e.brokersPorts[s] + ", PID " + a, 
-                    Object.keys(t).length === e.brokers)) for (var c = 0; c < e.workers; c++) i("Worker", c);
-                    Object.keys(t).length === e.brokers && Object.keys(o).length === e.workers && (r = !0, 
-                    logReady(">>>  Master on: " + e.port + ", PID: " + process.pid + " " + (e.tlsOptions ? " (secure)" : "")), 
-                    Object.keys(t).forEach(function(e) {
-                        return t.hasOwnProperty(e) && logReady(t[e]);
-                    }), Object.keys(o).forEach(function(e) {
-                        return o.hasOwnProperty(e) && logReady(o[e]);
-                    }));
-                }(s, a, n.pid);
-            }), c.on("exit", function() {
-                logError(s + " has exited \n"), e.restartWorkerOnFail && (logWarning(s + " is restarting \n"), 
-                i(s, a)), c = void 0;
-            }), c.send({
-                securityKey: n,
-                processId: a,
-                processName: s
-            });
-        }
-    }, e.prototype.workerProcess = function(e) {
-        process.on("message", function(r) {
-            var n = {
-                Worker: function() {
-                    return new Worker(e, r.securityKey);
-                },
-                Broker: function() {
-                    return BrokerServer(e.brokersPorts[r.processId], r.securityKey, e.horizontalScaleOptions, "Broker");
-                },
-                Scaler: function() {
-                    return e.horizontalScaleOptions && BrokerServer(e.horizontalScaleOptions.masterOptions.port, e.horizontalScaleOptions.key || "", e.horizontalScaleOptions, "Scaler");
-                }
-            };
-            n[r.processName] && n[r.processName]();
-        }), process.on("uncaughtException", function(e) {
-            return logError("PID: " + process.pid + "\n " + e.stack + "\n"), process.exit();
-        });
-    }, e;
-}();
+}
 
+ClusterWS.uWebSocket = UWebSocket, ClusterWS.uWebSocketServer = UWebSocketsServer, 
 module.exports = ClusterWS, module.exports.default = ClusterWS;
